@@ -36,6 +36,9 @@ def file_unifier(directory, dataList, settingsFile):
             self.data = data
             self.sectionIndexList = find_sections(self.data)
 
+            # Header data
+            self.header = self.data[:14]
+
             # Section data
             self.atoms = get_data('Atoms', self.data, self.sectionIndexList)
             self.masses = get_data('Masses', self.data, self.sectionIndexList)
@@ -81,9 +84,28 @@ def file_unifier(directory, dataList, settingsFile):
             
             return valid_masses, mass_change_dict
         
-        def change_atoms(self, mass_change_dict):
+        def change_atom_types(self, mass_change_dict):
             for atomList in self.atoms:
                 atomList[2] = mass_change_dict[atomList[2]]
+
+        def change_section_types(self, unioned_types, data_section):
+            '''
+            This function is different from change_mass_types as there is no removal of lines
+            '''
+            # Build new dict with old type keys and new type values
+            new_index_range = range(1, len(unioned_types) + 1)
+            type_zip = zip(unioned_types, new_index_range)
+            type_change_dict = dict(type_zip)
+
+            # Update data
+            sectionData = getattr(self, data_section)
+            for entryList in sectionData:
+                entryList[1] = type_change_dict[entryList[1]]
+
+        def change_header(self, typeList):
+            self.header = [line.split() for line in self.header]
+            for index, sectionType in enumerate(typeList):
+                self.header[6+index][0] = sectionType
 
     # Go to file directory
     os.chdir(directory)
@@ -100,14 +122,6 @@ def file_unifier(directory, dataList, settingsFile):
         # Initialise data class
         data = Data(data)
         lammpsData.append(data)
-
-
-    # Load dataFile into python as a list of lists
-    with open(settingsFile, 'r') as f:
-        settings = f.readlines()
-    
-    # Tidy settings
-    settings = clean_settings(settings)
 
     def union_types(typeAttr, lammpsData=lammpsData):
         lammpsTypes = []
@@ -127,19 +141,47 @@ def file_unifier(directory, dataList, settingsFile):
 
     # Union sets and create sorted list for each type
     atomTypes, numAtomTypes = union_types('get_atom_types')
-    bondypes, numBondTypes = union_types('get_bond_types')
+    bondTypes, numBondTypes = union_types('get_bond_types')
     angleTypes, numAngleTypes = union_types('get_angle_types')
-    dihedralTypes, numdihedralTypes = union_types('get_dihedral_types')
+    dihedralTypes, numDihedralTypes = union_types('get_dihedral_types')
     improperTypes, numImproperTypes = union_types('get_improper_types')
 
+    # Update sections
+    for data in lammpsData:
+        data.change_section_types(bondTypes, 'bonds')
+        data.change_section_types(angleTypes, 'angles')
+        data.change_section_types(dihedralTypes, 'dihedrals')
+        data.change_section_types(improperTypes, 'impropers')
+
+    processedBonds = [add_section_keyword('Bonds', data.bonds) for data in lammpsData]
+    processedAngles = [add_section_keyword('Angles', data.angles) for data in lammpsData]
+    processedDihedrals = [add_section_keyword('Dihedrals', data.dihedrals) for data in lammpsData]
+    processedImpropers = [add_section_keyword('Impropers', data.impropers) for data in lammpsData]
+    
     # Build new masses section - eliminate unused masses
     processedMass, massDict = lammpsData[0].change_mass_types(atomTypes)
     processedMass = add_section_keyword('Masses', processedMass)
 
     # Update atom types and get atoms sections
     for data in lammpsData:
-        data.change_atoms(massDict)
+        data.change_atom_types(massDict)
     processedAtoms = [add_section_keyword('Atoms', data.atoms) for data in lammpsData]
+
+    # Update header
+    sectionTypeCounts = [numAtomTypes, numBondTypes, numAngleTypes, numDihedralTypes, numImproperTypes]
+    for data in lammpsData:
+        data.change_header(sectionTypeCounts)
+
+    # Reinsert spaces between subsections of header
+
+    ####SETTINGS####
+
+    # Load dataFile into python as a list of lists
+    with open(settingsFile, 'r') as f:
+        settings = f.readlines()
+    
+    # Tidy settings
+    settings = clean_settings(settings)
 
     # Update pair coeffs
     originalPairTuples = list(combinations_with_replacement(atomTypes, 2))

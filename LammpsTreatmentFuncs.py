@@ -62,6 +62,10 @@ def get_data(sectionName, lines, sectionIndexList):
     return data
 
 def add_section_keyword(sectionName, data):
+    # Don't add keyword if list is empty - empty list means no section in file
+    if len(data) == 0:
+        return data
+
     # Add keyword name to start of list
     data.insert(0, '\n')
     data.insert(1, [sectionName])
