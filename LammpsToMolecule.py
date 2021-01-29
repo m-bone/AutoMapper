@@ -1,7 +1,7 @@
 import os
 import re
 import sys
-from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword
+from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file
 
 
 # ASSUMPTIONS
@@ -64,13 +64,7 @@ def LammpsToMolecule(directory, fileName, saveName):
         outputList.extend(keyword)
         
     # Output as text file
-    with open(saveName + 'molecule.data', 'w') as f:
-        for item in outputList:
-            line = " ".join(item)
-            if line != '\n':
-                f.write("%s\n" % line)
-            else: 
-                f.write(line)
+    save_text_file(saveName + 'molecule.data', outputList)
 
 # Run from command line
 cmdDirectory = sys.argv[1]

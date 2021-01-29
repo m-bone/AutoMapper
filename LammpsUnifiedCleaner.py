@@ -2,7 +2,7 @@ import os
 import re
 import sys
 from itertools import combinations_with_replacement
-from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword
+from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
 
 # TO DO - Extras
 # Remove lj/cut... for settings without hbonding. Would still need to fix hybrid in init
@@ -74,7 +74,8 @@ def file_unifier(directory, dataList, settingsFile):
             mass_types = [mass[0] for mass in valid_masses]
             
             # Create dictionary of original atom type keys and new type values
-            new_index_range = range(1, len(mass_types)+1)
+            new_index_range = list(range(1, len(mass_types)+1))
+            new_index_range = [str(val) for val in new_index_range]
             mass_zip = zip(mass_types, new_index_range)
             mass_change_dict = dict(mass_zip)
             
@@ -82,18 +83,24 @@ def file_unifier(directory, dataList, settingsFile):
             for massList in valid_masses:
                 massList[0] = mass_change_dict[massList[0]]
             
-            return valid_masses, mass_change_dict
+            # Update self and add section keyword
+            self.masses = add_section_keyword('Masses', valid_masses)
+
+            return mass_change_dict
         
         def change_atom_types(self, mass_change_dict):
             for atomList in self.atoms:
                 atomList[2] = mass_change_dict[atomList[2]]
+
+            add_section_keyword('Atoms', self.atoms)
 
         def change_section_types(self, unioned_types, data_section):
             '''
             This function is different from change_mass_types as there is no removal of lines
             '''
             # Build new dict with old type keys and new type values
-            new_index_range = range(1, len(unioned_types) + 1)
+            new_index_range = list(range(1, len(unioned_types) + 1))
+            new_index_range = [str(val) for val in new_index_range]
             type_zip = zip(unioned_types, new_index_range)
             type_change_dict = dict(type_zip)
 
@@ -101,6 +108,12 @@ def file_unifier(directory, dataList, settingsFile):
             sectionData = getattr(self, data_section)
             for entryList in sectionData:
                 entryList[1] = type_change_dict[entryList[1]]
+
+            # Add section keywords
+            sentenceCaseSection = data_section.capitalize()
+            add_section_keyword(sentenceCaseSection, sectionData)
+
+            return type_change_dict
 
         def change_header(self, typeList):
             self.header = [line.split() for line in self.header]
@@ -133,7 +146,7 @@ def file_unifier(directory, dataList, settingsFile):
 
         # Union sets to remove duplicates and sort into numerical order list 
         types = sorted(set().union(*lammpsTypes))
-        numTypes = len(types)
+        numTypes = str(len(types))
         
         print(f'{typeAttr}\n Types: {types}\n Count: {numTypes}')
 
@@ -148,44 +161,92 @@ def file_unifier(directory, dataList, settingsFile):
 
     # Update sections
     for data in lammpsData:
-        data.change_section_types(bondTypes, 'bonds')
-        data.change_section_types(angleTypes, 'angles')
-        data.change_section_types(dihedralTypes, 'dihedrals')
-        data.change_section_types(improperTypes, 'impropers')
-
-    processedBonds = [add_section_keyword('Bonds', data.bonds) for data in lammpsData]
-    processedAngles = [add_section_keyword('Angles', data.angles) for data in lammpsData]
-    processedDihedrals = [add_section_keyword('Dihedrals', data.dihedrals) for data in lammpsData]
-    processedImpropers = [add_section_keyword('Impropers', data.impropers) for data in lammpsData]
-    
-    # Build new masses section - eliminate unused masses
-    processedMass, massDict = lammpsData[0].change_mass_types(atomTypes)
-    processedMass = add_section_keyword('Masses', processedMass)
-
-    # Update atom types and get atoms sections
-    for data in lammpsData:
+        bondDict = data.change_section_types(bondTypes, 'bonds')
+        angleDict = data.change_section_types(angleTypes, 'angles')
+        dihedralDict = data.change_section_types(dihedralTypes, 'dihedrals')
+        improperDict = data.change_section_types(improperTypes, 'impropers')
+        massDict = data.change_mass_types(atomTypes)
         data.change_atom_types(massDict)
-    processedAtoms = [add_section_keyword('Atoms', data.atoms) for data in lammpsData]
 
     # Update header
     sectionTypeCounts = [numAtomTypes, numBondTypes, numAngleTypes, numDihedralTypes, numImproperTypes]
     for data in lammpsData:
         data.change_header(sectionTypeCounts)
+        # Reinsert spaces between subsections of header
+        data.header.insert(11, '\n')
+        data.header.insert(6, '\n')
+        data.header.insert(1, '\n')
 
-    # Reinsert spaces between subsections of header
+    # Save data files
+    
+    for index, data in enumerate(lammpsData):
+        # Combine all different data sources into one list
+        combinedData = [data.header, data.masses, data.atoms, data.bonds, data.angles, data.dihedrals, data.impropers]
+        # Flatten list of lists by one
+        combinedData = [val for sublist in combinedData for val in sublist]
 
+        # Save to text file
+        save_text_file('changed' + dataList[index], combinedData)
+    
     ####SETTINGS####
 
     # Load dataFile into python as a list of lists
     with open(settingsFile, 'r') as f:
         settings = f.readlines()
     
-    # Tidy settings
+    # Tidy settings and split
     settings = clean_settings(settings)
+    settings = [line.split() for line in settings]
 
-    # Update pair coeffs
+    # Create original atom type pair_coeff pairs
     originalPairTuples = list(combinations_with_replacement(atomTypes, 2))
+    # Get all pair_coeffs
+    pairCoeff = get_coeff("pair_coeff", settings)
+    
+    # Find valid pair_coeff pairs that are needed for this molecule
+    validPairCoeff = []
+    for pair in originalPairTuples:
+        for coeff in pairCoeff:
+            if coeff[1] == pair[0] and coeff[2] == pair[1]:
+                validPairCoeff.append(coeff)
+                break
 
+    # Update atom types in pair_coeffs with massDict
+    for pair in validPairCoeff:
+        pair[1] = massDict[pair[1]]
+        pair[2] = massDict[pair[2]]
+
+    def valid_coeffs(coeffType, updateDict, settingsData=settings):
+        # Get coeff lines
+        coeffs = get_coeff(coeffType, settingsData)
+
+        # Find valid coeffs from keys of updateDict
+        validCoeffs = []
+        for key in updateDict.keys():
+            for coeff in coeffs:
+                if coeff[1] == key:
+                    validCoeffs.append(coeff)
+                    break
+
+        # Update coeffs with values of updateDict
+        for coeff in validCoeffs:
+            coeff[1] = updateDict[coeff[1]]
+
+        return validCoeffs
+
+    # Update coeff values
+    validBondCoeff = valid_coeffs('bond_coeff', bondDict)
+    validAngleCoeff = valid_coeffs('angle_coeff', angleDict)
+    validDihedralCoeff = valid_coeffs('dihedral_coeff', dihedralDict)
+    validImproperCoeff = valid_coeffs('improper_coeff', improperDict)
+
+    # Combine all the coeff sources
+    combinedCoeffs = [validPairCoeff, validBondCoeff, validAngleCoeff, validDihedralCoeff, validImproperCoeff]
+    # Flatten list of lists by one
+    combinedCoeffs = [val for sublist in combinedCoeffs for val in sublist]
+
+
+    save_text_file('changed' + settingsFile, combinedCoeffs)
     print()
 
 file_unifier('/home/matt/Documents/Bond_React_Python/', ['pre-system.data', 'post-system.data'], 'system.in.settings')

@@ -61,6 +61,13 @@ def get_data(sectionName, lines, sectionIndexList):
 
     return data
 
+def get_coeff(coeffName, settingsData):
+    # Inputs pre-split data
+    # Return all lines that include coeffName in the [0] index
+    coeffs = [line for line in settingsData if line[0] == coeffName]
+    
+    return coeffs
+
 def add_section_keyword(sectionName, data):
     # Don't add keyword if list is empty - empty list means no section in file
     if len(data) == 0:
@@ -72,3 +79,13 @@ def add_section_keyword(sectionName, data):
     data.insert(2, '\n')
 
     return data
+
+def save_text_file(fileName, dataSource):
+    # Save to text file
+    with open(fileName, 'w') as f:
+        for item in dataSource:
+            line = " ".join(item)
+            if line != '\n':
+                f.write("%s\n" % line)
+            else: 
+                f.write(line)
