@@ -4,9 +4,6 @@ import sys
 from itertools import combinations_with_replacement
 from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
 
-# TO DO - Extras
-# Remove lj/cut... for settings without hbonding. Would still need to fix hybrid in init
-
 # ASSUMPTIONS
 # Box size is identical between files
 
@@ -29,7 +26,7 @@ from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_
 #   y1 y2 ylo yhi
 #   z1 z2 zlo zhi
 
-def file_unifier(directory, dataList, settingsFile):
+def file_unifier(directory, coeffsFile, dataList):
     # Class for handling Lammps data
     class Data:
         def __init__(self, data):
@@ -186,12 +183,12 @@ def file_unifier(directory, dataList, settingsFile):
         combinedData = [val for sublist in combinedData for val in sublist]
 
         # Save to text file
-        save_text_file('changed' + dataList[index], combinedData)
+        save_text_file('cleaned' + dataList[index], combinedData)
     
     ####SETTINGS####
 
     # Load dataFile into python as a list of lists
-    with open(settingsFile, 'r') as f:
+    with open(coeffsFile, 'r') as f:
         settings = f.readlines()
     
     # Tidy settings and split
@@ -246,7 +243,4 @@ def file_unifier(directory, dataList, settingsFile):
     combinedCoeffs = [val for sublist in combinedCoeffs for val in sublist]
 
 
-    save_text_file('changed' + settingsFile, combinedCoeffs)
-    print()
-
-file_unifier('/home/matt/Documents/Bond_React_Python/', ['pre-system.data', 'post-system.data'], 'system.in.settings')
+    save_text_file('cleaned' + coeffsFile, combinedCoeffs)
