@@ -7,7 +7,7 @@ from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_sectio
 # ASSUMPTIONS
 # LAMMPS Atom Type is full
 
-def LammpsToMolecule(directory, fileName, saveName):
+def lammps_to_molecule(directory, fileName, saveName):
     # Go to file directory
     os.chdir(directory)
 
@@ -66,8 +66,3 @@ def LammpsToMolecule(directory, fileName, saveName):
     # Output as text file
     save_text_file(saveName + 'molecule.data', outputList)
 
-# Run from command line
-cmdDirectory = sys.argv[1]
-cmdFileName = sys.argv[2]
-cmdSaveName = sys.argv[3]
-LammpsToMolecule(cmdDirectory, cmdFileName , cmdSaveName)

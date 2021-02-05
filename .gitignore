@@ -3,3 +3,4 @@ __pycache__
 .pytest*
 *.data
 *.settings
+Test_Cases
