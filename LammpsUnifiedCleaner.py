@@ -1,12 +1,27 @@
-import os
-import re
-import sys
-from itertools import combinations_with_replacement
-from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 08/02/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# Processes any number of LAMMPS 'read_data' input files, and a coefficients 
+# file, in unison to reduce coefficient values down to the lowest possible 
+# values. This is designed to work with Moltemplate system.data and
+# system.in.settings files.
+# If only one data file is specified this function is analogous to
+# cleanup_moltemplate.sh.
 
-# ASSUMPTIONS
-# Box size is identical between files
-
+# Assumptions:
+# LAMMPS Atom Type is full
+# Unit cell size is identical between files
 # That the header of the file operates in the standard format:
 # Comment
 #
@@ -25,6 +40,13 @@ from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_
 #   x1 x2 xlo xhi
 #   y1 y2 ylo yhi
 #   z1 z2 zlo zhi
+##############################################################################
+
+import os
+import re
+import sys
+from itertools import combinations_with_replacement
+from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
 
 def file_unifier(directory, coeffsFile, dataList):
     # Class for handling Lammps data
@@ -242,5 +264,5 @@ def file_unifier(directory, coeffsFile, dataList):
     # Flatten list of lists by one
     combinedCoeffs = [val for sublist in combinedCoeffs for val in sublist]
 
-
+    # Save coeff file
     save_text_file('cleaned' + coeffsFile, combinedCoeffs)

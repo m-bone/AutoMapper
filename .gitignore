@@ -1,6 +1,3 @@
 __pycache__
 .vscode
 .pytest*
-*.data
-*.settings
-Test_Cases

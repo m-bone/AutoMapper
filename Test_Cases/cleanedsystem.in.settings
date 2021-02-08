@@ -1,0 +1,8 @@
+pair_coeff 1 1 lj/cut/coul/long 0.0152 2.846421
+pair_coeff 1 2 lj/cut/coul/long 0.03801999 3.1597055
+pair_coeff 2 2 lj/cut/coul/long 0.0951 3.47299
+bond_coeff 1 350.0 0.65
+bond_coeff 2 350.0 1.09
+bond_coeff 3 350.0 1.53
+angle_coeff 1 50.0 109.471
+dihedral_coeff 1 0.1111 3 720 0.000

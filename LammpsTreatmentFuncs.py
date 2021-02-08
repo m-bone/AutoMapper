@@ -1,8 +1,26 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 08/02/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# A range of functions designed to pre-process, search, and save LAMMPS
+# 'read_data' input files. Built for Bond_React processing but can be applied
+# to a wide range of problems
+##############################################################################
+
 import re
 
 # Function maybe moved to general function file later
 def clean_data(lines):
-    '''Remove stuff - done for neatness, to pass futher checks, and makes indexing sequential'''
     # Remove blank lines 
     lines = [line for line in lines if line != '\n']
 
