@@ -17,7 +17,10 @@
 # to a wide range of problems
 ##############################################################################
 
-import re
+import re # For clean_data, clean_settings
+from collections import Counter # For refine_data
+from operator import itemgetter # For refine_data
+from natsort import natsorted # For refine_data
 
 # Function maybe moved to general function file later
 def clean_data(lines):
@@ -78,6 +81,42 @@ def get_data(sectionName, lines, sectionIndexList):
     data = [val.split() for val in data]
 
     return data
+
+def refine_data(data, searchIndex: list, IDset):
+    '''
+    Search multiple indices for matching atomID value.
+    If match is found keep that list row in the data.
+    Only output that row if the row appears len(searchIndex) times
+    This means the data row contains valid atomIDs in all possible ID positions
+    '''
+    #
+    if type(searchIndex) is not list:
+        searchIndex = [searchIndex]
+
+    possibleValidData = []
+    for atomID in IDset:
+        for row in data:
+            for index in searchIndex:
+                if row[index] == atomID:
+                    possibleValidData.append(row)
+
+    # Lammps IDs found in above search
+    possibleValidIDs = [val[0] for val in possibleValidData]
+    IDCount = dict(Counter(possibleValidIDs))
+    # If ID counter is the same size as the search index, ID is valid and gets added to data
+    validIDs = [key for key in IDCount.keys() if IDCount[key] == len(searchIndex)]        
+    validData = []
+    for row in possibleValidData:
+        if row[0] in validIDs:
+            validData.append(row)
+            # Stops duplicate IDs being refound in the future
+            validIDIndex = validIDs.index(row[0])
+            del validIDs[validIDIndex]
+
+    # Re-sort validData by ID, use natsort as values are str not int
+    validData = natsorted(validData, key=itemgetter(0))
+    
+    return validData
 
 def get_coeff(coeffName, settingsData):
     # Inputs pre-split data
