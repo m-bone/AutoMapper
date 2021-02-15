@@ -146,3 +146,58 @@ def save_text_file(fileName, dataSource):
                 f.write("%s\n" % line)
             else: 
                 f.write(line)
+
+# Search bond pair
+def pair_search(bond, bondAtom):
+    if bond[2] == bondAtom:
+        return bond[3]
+    elif bond[3] == bondAtom:
+        return bond[2]
+
+# Loop through atomIDs, possible bonds and find valid bonds
+def search_loop(bonds, bondAtom):
+    nextBondAtomList = []
+
+    for searchAtom in bondAtom:
+        for bond in bonds:
+            nextAtomID = pair_search(bond, searchAtom)
+            if nextAtomID is not None:
+                nextBondAtomList.append(nextAtomID)
+    
+    return nextBondAtomList
+        
+def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
+# Find bonds involving bonding atoms
+    validAtomSet = set(bondingAtoms)
+    edgeAtomSet = set()
+    for bondAtom in bondingAtoms:
+
+        # Make bondAtom a list
+        newBondAtomList = [bondAtom]
+        
+        i = 1
+        while i <= bondDistance:
+            i += 1
+            newBondAtomList = search_loop(originalBonds, newBondAtomList)
+            if i <= bondDistance:
+                # Add list as individual elements
+                [validAtomSet.add(val) for val in newBondAtomList]
+
+            else:
+                # Determine which of the last obtained atom IDs have more bonds
+                # These atoms should be edge atoms
+                furthestAtomSet = set(newBondAtomList)
+                possibleEdgeAtoms = furthestAtomSet.difference(validAtomSet)
+                
+                [validAtomSet.add(val) for val in newBondAtomList]
+
+                # Run another loop to determine if possibleEdgeAtoms have other bonds
+                for searchAtom in possibleEdgeAtoms:
+                    bondCount = 0
+                    for bond in originalBonds:
+                        nextAtomID = pair_search(bond, searchAtom)
+                        if nextAtomID is not None:
+                            bondCount += 1
+                    if bondCount > 1: # All atoms will have at least one bond
+                        edgeAtomSet.add(searchAtom)
+    return validAtomSet, edgeAtomSet

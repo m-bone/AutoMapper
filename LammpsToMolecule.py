@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 08/02/2021
+# Last Updated: 12/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -39,8 +39,6 @@
 ##############################################################################
 
 import os
-import re
-import sys
 from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file
 
 def lammps_to_molecule(directory, fileName, saveName):
