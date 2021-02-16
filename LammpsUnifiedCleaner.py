@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 08/02/2021
+# Last Updated: 16/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -43,8 +43,7 @@
 ##############################################################################
 
 import os
-import re
-import sys
+from natsort import natsorted
 from itertools import combinations_with_replacement
 from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
 
@@ -164,7 +163,7 @@ def file_unifier(directory, coeffsFile, dataList):
             lammpsTypes.append(func())
 
         # Union sets to remove duplicates and sort into numerical order list 
-        types = sorted(set().union(*lammpsTypes))
+        types = natsorted(set().union(*lammpsTypes))
         numTypes = str(len(types))
         
         print(f'{typeAttr}\n Types: {types}\n Count: {numTypes}')

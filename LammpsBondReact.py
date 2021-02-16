@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 08/02/2021
+# Last Updated: 16/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -19,6 +19,8 @@
 import sys
 from LammpsUnifiedCleaner import file_unifier
 from LammpsToMolecule import lammps_to_molecule
+from LammpsToMoleculePartial import lammps_to_molecule_partial
+from LammpsToLammpsPartial import lammps_to_lammps_partial
 
 directory = sys.argv[1]
 
@@ -35,3 +37,17 @@ elif sys.argv[2] == "molecule":
     dataFileName = sys.argv[3]
     molSaveName = sys.argv[4]
     lammps_to_molecule(directory, dataFileName , molSaveName)
+
+# Produce partial molecule data file
+elif sys.argv[2] == "molecule-partial":
+    dataFileName = sys.argv[3]
+    molSaveName = sys.argv[4]
+    bondingAtoms = sys.argv[5:]
+    lammps_to_molecule_partial(directory, dataFileName, molSaveName, bondingAtoms)
+
+# Produce partial lammps data file
+elif sys.argv[2] == "lammps-partial":
+    dataFileName = sys.argv[3]
+    molSaveName = sys.argv[4]
+    bondingAtoms = sys.argv[5:]
+    lammps_to_lammps_partial(directory, dataFileName, molSaveName, bondingAtoms)
