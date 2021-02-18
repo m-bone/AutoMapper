@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 12/02/2021
+# Last Updated: 16/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -14,7 +14,7 @@
 # File Description:
 # Converts LAMMPS 'read_data' input files into a cut down partial structure,
 # still in LAMMPS data input file format. This is more for testing as these
-# files can be read by visualisors like Ovito 
+# files can be read by visualisers like Ovito 
 
 # Assumptions:
 # LAMMPS Atom Type is full
@@ -40,9 +40,9 @@
 
 import os
 from natsort import natsorted
-from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file, refine_data, find_partial_structure
+from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file, refine_data, find_partial_structure, format_comment
 
-def lammps_to_molecule(directory, bondingAtoms, fileName, saveName):
+def lammps_to_lammps_partial(directory, fileName, saveName, bondingAtoms):
     # Go to file directory
     os.chdir(directory)
 
@@ -69,7 +69,6 @@ def lammps_to_molecule(directory, bondingAtoms, fileName, saveName):
     atoms = get_data('Atoms', tidiedLines, sectionIndexList)
     atoms = refine_data(atoms, 0, validAtomSet)
     atoms = add_section_keyword('Atoms', atoms)
-    # SAYS IT HAS 12 ATOMS, ONLY OUTPUTS 9 - GETS COUNT WRONG ALL OVER THE PLACE
     
     # Get new bonds data
     bonds = refine_data(originalBonds, [2, 3], validAtomSet)
@@ -103,19 +102,17 @@ def lammps_to_molecule(directory, bondingAtoms, fileName, saveName):
     header.insert(5, '\n')
     header.insert(0, '\n')
 
-    # Add edge atoms as comment in header
-    edgeAtomList = natsorted(list(edgeAtomSet))
-    edgeAtomList.insert(0, '#Edge Atoms:')
-    edgeAtomString = [[' '.join(edgeAtomList)]] # Has to be list of lists to pass through later code
+    # Add bond and edge atoms as comment in header
+    bondAtoms = format_comment(bondingAtoms, '# Bonding_Atoms ')
+    edgeAtoms = format_comment(edgeAtomSet, '# Edge_Atoms ')
+    commentString = [bondAtoms, edgeAtoms]
     
     # Combine to one long output list
     outputList = []
-    totalList = [edgeAtomString, header, masses, atoms, bonds, angles, dihedrals, impropers]
+    totalList = [commentString, header, masses, atoms, bonds, angles, dihedrals, impropers]
     
     for keyword in totalList:
         outputList.extend(keyword)
         
     # Output as text file
     save_text_file(saveName + 'molecule.data', outputList)
-
-lammps_to_molecule('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Pre_Reaction', ['28'], 'system.data', 'lammpstest')

@@ -22,6 +22,7 @@
 # Assumptions:
 # LAMMPS Atom Type is full
 # Unit cell size is identical between files
+# Pair coeffs are defined with numbers and not wildcarded with *
 # That the header of the file operates in the standard format:
 # Comment
 #
@@ -222,12 +223,13 @@ def file_unifier(directory, coeffsFile, dataList):
     pairCoeff = get_coeff("pair_coeff", settings)
     
     # Find valid pair_coeff pairs that are needed for this molecule
+    # Currently, the h-bond flag value in hbond/dreiding is sorted as H_HB will always be 2 if H is in system
+    # Apart from water or peroxide...
     validPairCoeff = []
     for pair in originalPairTuples:
         for coeff in pairCoeff:
             if coeff[1] == pair[0] and coeff[2] == pair[1]:
                 validPairCoeff.append(coeff)
-                break
 
     # Update atom types in pair_coeffs with massDict
     for pair in validPairCoeff:

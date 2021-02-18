@@ -89,10 +89,11 @@ def refine_data(data, searchIndex: list, IDset):
     Only output that row if the row appears len(searchIndex) times
     This means the data row contains valid atomIDs in all possible ID positions
     '''
-    #
+    # Convenience to convert int values to list
     if type(searchIndex) is not list:
         searchIndex = [searchIndex]
 
+    # Adds rows that include a valid atom ID to list
     possibleValidData = []
     for atomID in IDset:
         for row in data:
@@ -146,6 +147,14 @@ def save_text_file(fileName, dataSource):
                 f.write("%s\n" % line)
             else: 
                 f.write(line)
+
+# Create comment string with bond atoms and edge atoms
+def format_comment(IDlist, comment):
+    atomList = natsorted(list(IDlist))
+    atomList.insert(0, comment)
+    atomString = [' '.join(atomList)] # Has to be list of lists to pass through later code
+
+    return atomString
 
 # Search bond pair
 def pair_search(bond, bondAtom):
