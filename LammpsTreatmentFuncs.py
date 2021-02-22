@@ -145,7 +145,7 @@ def save_text_file(fileName, dataSource):
             line = " ".join(item)
             if line != '\n':
                 f.write("%s\n" % line)
-            else: 
+            else:
                 f.write(line)
 
 # Create comment string with bond atoms and edge atoms
@@ -186,9 +186,12 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
         
         i = 1
         while i <= bondDistance:
-            i += 1
             newBondAtomList = search_loop(originalBonds, newBondAtomList)
-            if i <= bondDistance:
+            if i == 1:
+                # Stop search from finding other bonding atom if they are bound together
+                newBondAtomList = [val for val in newBondAtomList if val not in bondingAtoms]
+
+            if i < bondDistance:
                 # Add list as individual elements
                 [validAtomSet.add(val) for val in newBondAtomList]
 
@@ -209,4 +212,7 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
                             bondCount += 1
                     if bondCount > 1: # All atoms will have at least one bond
                         edgeAtomSet.add(searchAtom)
+            
+            # Increment iterator
+            i += 1
     return validAtomSet, edgeAtomSet

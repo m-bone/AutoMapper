@@ -43,6 +43,9 @@ from natsort import natsorted
 from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file, refine_data, find_partial_structure, format_comment
 
 def lammps_to_molecule_partial(directory, fileName, saveName, bondingAtoms):
+    # Check that bonding atoms have been specified
+    assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
+
     # Go to file directory
     os.chdir(directory)
 
@@ -98,7 +101,7 @@ def lammps_to_molecule_partial(directory, fileName, saveName, bondingAtoms):
     header = tidiedLines[1:6]
     header = [val.split() for val in header]
     # Update numbers with new lengths of data
-    for index, data in enumerate([atoms, bonds, angles, dihedrals, impropers]):
+    for index, data in enumerate([types, bonds, angles, dihedrals, impropers]):
         if len(data) > 0: # This corrects for the added section keyword lines
             header[index][0] = str(len(data) - 3)
         else:

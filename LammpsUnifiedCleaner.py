@@ -101,6 +101,9 @@ def file_unifier(directory, coeffsFile, dataList):
             # Change atom types to new types
             for massList in valid_masses:
                 massList[0] = mass_change_dict[massList[0]]
+                # Add space to start of comment, if present, so it matches moltemplate
+                if len(massList) >2:
+                    massList[2] = massList[2].rjust(2)
             
             # Update self and add section keyword
             self.masses = add_section_keyword('Masses', valid_masses)

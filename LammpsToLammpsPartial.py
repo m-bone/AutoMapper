@@ -43,6 +43,9 @@ from natsort import natsorted
 from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file, refine_data, find_partial_structure, format_comment
 
 def lammps_to_lammps_partial(directory, fileName, saveName, bondingAtoms):
+    # Check that bonding atoms have been specified
+    assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
+
     # Go to file directory
     os.chdir(directory)
 

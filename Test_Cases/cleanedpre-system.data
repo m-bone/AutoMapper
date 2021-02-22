@@ -18,8 +18,8 @@ LAMMPS Description
 
 Masses
 
-1 1.008 # H
-2 12.011 # C_3
+1 1.008  # H
+2 12.011  # C_3
 
 Atoms
 
