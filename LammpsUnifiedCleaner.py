@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/02/2021
+# Last Updated: 23/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -46,7 +46,8 @@
 import os
 from natsort import natsorted
 from itertools import combinations_with_replacement
-from LammpsTreatmentFuncs import clean_data, clean_settings, find_sections, get_data, add_section_keyword, get_coeff, save_text_file
+from LammpsTreatmentFuncs import clean_data, clean_settings, add_section_keyword, save_text_file
+from LammpsSearchFuncs import get_data, get_coeff, find_sections
 
 def file_unifier(directory, coeffsFile, dataList):
     # Class for handling Lammps data

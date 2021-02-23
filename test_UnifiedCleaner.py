@@ -1,5 +1,6 @@
 from LammpsUnifiedCleaner import file_unifier
-from LammpsTreatmentFuncs import get_data, clean_data, find_sections
+from LammpsTreatmentFuncs import clean_data
+from LammpsSearchFuncs import get_data, find_sections
 
 def test_unified_cleaner():
     file_unifier('/home/matt/Documents/Bond_React_Python/Test_Cases', 'system.in.settings', ['pre-system.data', 'post-system.data'])

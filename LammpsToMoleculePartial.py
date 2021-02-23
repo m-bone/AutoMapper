@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/02/2021
+# Last Updated: 23/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -40,9 +40,10 @@
 
 import os
 from natsort import natsorted
-from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file, refine_data, find_partial_structure, format_comment
+from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file, refine_data, format_comment
+from LammpsSearchFuncs import get_data, find_partial_structure, find_sections
 
-def lammps_to_molecule_partial(directory, fileName, saveName, bondingAtoms):
+def lammps_to_molecule_partial(directory, fileName, saveName, bondingAtoms: list):
     # Check that bonding atoms have been specified
     assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
 

@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 12/02/2021
+# Last Updated: 23/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -39,7 +39,8 @@
 ##############################################################################
 
 import os
-from LammpsTreatmentFuncs import clean_data, find_sections, get_data, add_section_keyword, save_text_file
+from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file
+from LammpsSearchFuncs import get_data, find_sections
 
 def lammps_to_molecule(directory, fileName, saveName):
     # Go to file directory

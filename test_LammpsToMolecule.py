@@ -1,5 +1,6 @@
 from LammpsToMolecule import lammps_to_molecule
-from LammpsTreatmentFuncs import get_data, clean_data, find_sections
+from LammpsTreatmentFuncs import clean_data
+from LammpsSearchFuncs import get_data, find_sections
 
 def test_lammps_to_molecule():
     lammps_to_molecule('/home/matt/Documents/Bond_React_Python/Test_Cases', 'cleanedpre-system.data', 'pre')

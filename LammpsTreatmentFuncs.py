@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 08/02/2021
+# Last Updated: 23/02/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -56,32 +56,6 @@ def clean_settings(lines):
 
     return lines
 
-def find_sections(lines):
-    # Find index of section keywords - isalpha works as no spaces, newlines or punc in section keywords
-    sectionIndexList = [lines.index(line) for line in lines if line.isalpha()]
-
-    # Add end of file as last index
-    sectionIndexList.append(len(lines))
-
-    return sectionIndexList
-
-# Get data
-def get_data(sectionName, lines, sectionIndexList):
-    # Checks that section name is existing in LAMMPS data
-    try:
-        startIndex = lines.index(sectionName)
-    except ValueError:
-        # If doesn't exist, return empty list that can be added as normal to main list later
-        data = []
-        return data
-
-    endIndex = sectionIndexList[sectionIndexList.index(startIndex) + 1]
-    
-    data = lines[startIndex+1:endIndex] # +1 means sectionName doesn't get included
-    data = [val.split() for val in data]
-
-    return data
-
 def refine_data(data, searchIndex: list, IDset):
     '''
     Search multiple indices for matching atomID value.
@@ -119,13 +93,6 @@ def refine_data(data, searchIndex: list, IDset):
     
     return validData
 
-def get_coeff(coeffName, settingsData):
-    # Inputs pre-split data
-    # Return all lines that include coeffName in the [0] index
-    coeffs = [line for line in settingsData if line[0] == coeffName]
-    
-    return coeffs
-
 def add_section_keyword(sectionName, data):
     # Don't add keyword if list is empty - empty list means no section in file
     if len(data) == 0:
@@ -155,64 +122,3 @@ def format_comment(IDlist, comment):
     atomString = [' '.join(atomList)] # Has to be list of lists to pass through later code
 
     return atomString
-
-# Search bond pair
-def pair_search(bond, bondAtom):
-    if bond[2] == bondAtom:
-        return bond[3]
-    elif bond[3] == bondAtom:
-        return bond[2]
-
-# Loop through atomIDs, possible bonds and find valid bonds
-def search_loop(bonds, bondAtom):
-    nextBondAtomList = []
-
-    for searchAtom in bondAtom:
-        for bond in bonds:
-            nextAtomID = pair_search(bond, searchAtom)
-            if nextAtomID is not None:
-                nextBondAtomList.append(nextAtomID)
-    
-    return nextBondAtomList
-        
-def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
-# Find bonds involving bonding atoms
-    validAtomSet = set(bondingAtoms)
-    edgeAtomSet = set()
-    for bondAtom in bondingAtoms:
-
-        # Make bondAtom a list
-        newBondAtomList = [bondAtom]
-        
-        i = 1
-        while i <= bondDistance:
-            newBondAtomList = search_loop(originalBonds, newBondAtomList)
-            if i == 1:
-                # Stop search from finding other bonding atom if they are bound together
-                newBondAtomList = [val for val in newBondAtomList if val not in bondingAtoms]
-
-            if i < bondDistance:
-                # Add list as individual elements
-                [validAtomSet.add(val) for val in newBondAtomList]
-
-            else:
-                # Determine which of the last obtained atom IDs have more bonds
-                # These atoms should be edge atoms
-                furthestAtomSet = set(newBondAtomList)
-                possibleEdgeAtoms = furthestAtomSet.difference(validAtomSet)
-                
-                [validAtomSet.add(val) for val in newBondAtomList]
-
-                # Run another loop to determine if possibleEdgeAtoms have other bonds
-                for searchAtom in possibleEdgeAtoms:
-                    bondCount = 0
-                    for bond in originalBonds:
-                        nextAtomID = pair_search(bond, searchAtom)
-                        if nextAtomID is not None:
-                            bondCount += 1
-                    if bondCount > 1: # All atoms will have at least one bond
-                        edgeAtomSet.add(searchAtom)
-            
-            # Increment iterator
-            i += 1
-    return validAtomSet, edgeAtomSet
