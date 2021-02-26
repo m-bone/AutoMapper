@@ -68,89 +68,67 @@ post_matrix, post_atomIDs = gen_distance_matrix('/home/matt/Documents/Oct20-Dec2
 
 # diffMatrix = pre_matrix - post_matrix
 
-searchRow = pre_matrix[11]
-searchRowIndex = np.argsort(searchRow)
-searchRowSorted = np.take_along_axis(searchRow, searchRowIndex, axis=0)
-mask = [index for index, val in enumerate(searchRowSorted) if val > 10]
-# for index in mask:
-#     searchRowSorted[index] = 0
+# searchRow = pre_matrix[11]
+# searchRowIndex = np.argsort(searchRow)
+# searchRowSorted = np.take_along_axis(searchRow, searchRowIndex, axis=0)
+# mask = [index for index, val in enumerate(searchRowSorted) if val > 10]
+# # for index in mask:
+# #     searchRowSorted[index] = 0
 
-distArrayList = []
+# distArrayList = []
 
-distDifference = []
-indexList = []
+# distDifference = []
+# indexList = []
 
-for row in post_matrix:
-    # Order row smallest to largest and store index
-    rowIndex = np.argsort(row)
-    indexList.append(rowIndex)
+# for row in post_matrix:
+#     # Order row smallest to largest and store index
+#     rowIndex = np.argsort(row)
+#     indexList.append(rowIndex)
 
-    rowSorted = np.take_along_axis(row, rowIndex, axis=0)
-    # for index in mask:
-    #     rowSorted[index] = 0
+#     rowSorted = np.take_along_axis(row, rowIndex, axis=0)
+#     # for index in mask:
+#     #     rowSorted[index] = 0
 
-    # searchRow minus row
-    diffRow = searchRowSorted - rowSorted
-    distArrayList.append(np.around(diffRow, decimals=3))
-    diffRow = np.abs(diffRow)
-    diffRow = np.log(diffRow)
-    diffRow = np.nan_to_num(diffRow, neginf=0.0)
+#     # searchRow minus row
+#     diffRow = searchRowSorted - rowSorted
+#     distArrayList.append(np.around(diffRow, decimals=3))
+#     diffRow = np.abs(diffRow)
+#     diffRow = np.log(diffRow)
+#     diffRow = np.nan_to_num(diffRow, neginf=0.0)
 
-    # Sum values
-    arraySum = np.sum(diffRow)
+#     # Sum values
+#     arraySum = np.sum(diffRow)
 
-    # Append
-    distDifference.append(arraySum)
+#     # Append
+#     distDifference.append(arraySum)
 
 print()
-# lowDiffIndex = []
+lowDiffIndex = []
 
-# for searchRow in pre_matrix:
-#     searchRowIndex = np.argsort(searchRow)
-#     searchRowSorted = np.take_along_axis(searchRow, searchRowIndex, axis=0)
-#     mask = [index for index, val in enumerate(searchRowSorted) if val > 10]
-#     for index in mask:
-#         searchRowSorted[index] = 0
+for searchRow in pre_matrix:
+    searchRowIndex = np.argsort(searchRow)
+    searchRowSorted = np.take_along_axis(searchRow, searchRowIndex, axis=0)
+
+    distDifference = []
+
+    for row in post_matrix:
+        # Order row smallest to largest and store index
+        rowIndex = np.argsort(row)
+        rowSorted = np.take_along_axis(row, rowIndex, axis=0)
+
+        # searchRow minus row
+        diffRow = searchRowSorted - rowSorted
+        diffRow = np.abs(diffRow)
+
+        # Sum values
+        arraySum = np.sum(diffRow)
+
+        # Append
+        distDifference.append(arraySum)
+
+    # Find index of smallest value
+    _, smallestValIndex = min((val, idx) for (idx, val) in enumerate(distDifference))
     
-    
-#     distArrayList = []
-    
-#     distDifference = []
-#     indexList = []
-
-#     for row in post_matrix:
-#         # Order row smallest to largest and store index
-#         rowIndex = np.argsort(row)
-#         indexList.append(rowIndex)
-
-#         rowSorted = np.take_along_axis(row, rowIndex, axis=0)
-#         for index in mask:
-#             rowSorted[index] = 0
-
-#         # searchRow minus row
-#         diffRow = searchRowSorted - rowSorted
-#         distArrayList.append(np.around(diffRow, decimals=2))
-#         diffRow = np.abs(diffRow)
-
-#         # Sum values
-#         arraySum = np.sum(diffRow)
-
-#         # Append
-#         distDifference.append(arraySum)
-
-#     # Find index of smallest value
-#     _, smallestValIndex = min((val, idx) for (idx, val) in enumerate(distDifference))
-    
-#     lowDiffIndex.append(indexList[smallestValIndex])
-
-# from statistics import mode
-# finalResult = []
-# for index in range(0,len(lowDiffIndex)-1):
-#     indexValues = []
-#     for l in lowDiffIndex:
-#         indexValues.append(l[index])
-    
-#     modeVal = mode(indexValues)
-#     finalResult.append(modeVal)
+    lowDiffIndex.append(smallestValIndex)
 
 print()
