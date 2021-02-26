@@ -117,7 +117,7 @@ def save_text_file(fileName, dataSource):
 
 # Create comment string with bond atoms and edge atoms
 def format_comment(IDlist, comment):
-    atomList = natsorted(list(IDlist))
+    atomList = list(IDlist)
     atomList.insert(0, comment)
     atomString = [' '.join(atomList)] # Has to be list of lists to pass through later code
 
