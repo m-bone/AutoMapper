@@ -1,8 +1,11 @@
 import os
 import math
 import numpy as np
+from natsort import natsorted
 from collections import deque
+from functools import reduce
 import matplotlib.pyplot as plt
+
 from LammpsSearchFuncs import get_data, find_sections, pair_search
 from LammpsTreatmentFuncs import clean_data
 
@@ -25,13 +28,41 @@ def calc_bond_length(bondRow, coordDict):
 
     return [bondID, bondLength]
 
-# def calc_bond_distance(startAtom, targetAtom, bonds, bondLengthDict):
-#     searchPoint = startAtom
-#     possibleStartList = []
-#     for bond in bonds:
-#         pairResult = pair_search(bond, searchPoint)
-#         if pairResult is not None:
-#             possibleStartList.append(pairResult)
+def get_bond_path(atomList, bonds):
+    bondIDList = []
+
+    # If no bond is present, return empty list
+    if atomList[0] is None:
+        return bondIDList
+    
+    for index, atom in enumerate(atomList):
+        # Get bond partner or quit if no more partners
+        try:
+            bondPartner = atomList[index+1]
+        except IndexError:
+            break
+
+        # Sort atoms smallest to largest, this is a LAMMPS assumption
+        bondPair = natsorted([atom, bondPartner])
+
+        # Find bond that features both atoms
+        for bond in bonds:
+            if bond[2] == bondPair[0] and bond[3] == bondPair[1]:
+                bondIDList.append(bond[0])
+
+    return bondIDList
+
+def calc_path_distance(bondList, bondDict):
+    # If bondList is empty return zero
+    if len(bondList) == 0:
+        return 0.0
+
+    bondDistList = []
+    for bondID in bondList:
+        bondDistList.append(bondDict[bondID])
+
+    bondDistMultiple = reduce((lambda x, y: x * y), bondDistList)
+    return bondDistMultiple
 
 class Graph:
     def __init__(self):
@@ -73,31 +104,40 @@ class Queue:
         return self.elements.popleft()
 
 def breadth_first_search(graph, start, target):
-    # This code and associated classes comes from https://www.redblobgames.com/pathfinding/a-star/introduction.html
+    # Shortcircuit to None path list if start and target are the same atom
+    if start == target:
+        return [None]
+    
+    # This code and associated classes is adapted from from https://www.redblobgames.com/pathfinding/a-star/introduction.html
     # and https://www.redblobgames.com/pathfinding/a-star/implementation.html
     queue = Queue()
     queue.put(start)
     came_from = dict()
     came_from[start] = None
     
-    while not queue.empty():
-        current = queue.get()
-        for next in graph.neighbours(current):
-            if next not in came_from:
-                queue.put(next)
-                came_from[next] = current
+    while not queue.empty(): # If queue is not empty then there are atoms that haven't been searched
+        current = queue.get() # Removes one from queue and looks at it
+        for next in graph.neighbours(current): # Get all the neighbours of the atom
+            if next not in came_from: # Neighbours haven't been looked at
+                queue.put(next) # Add them to the queue
+                came_from[next] = current # Add to dict
 
     current = target
     path = []
     while current != start:
         path.append(current)
-        current = came_from[current]
-    path.append(start)
-    path.reverse()
+        try:
+            current = came_from[current]
+        except KeyError: # If no path exists, path is None
+            path = [None]
+            break
+    if path[0] is not None:
+        path.append(start)
+        path.reverse()
 
-    print(path)
+    return path
 
-def bond_distance_matrix(directory, fileName):
+def bond_distance_matrix(directory, fileName, bondingAtoms):
     os.chdir(directory)
 
     # Load molecule file
@@ -118,12 +158,31 @@ def bond_distance_matrix(directory, fileName):
     bondsLengthList = [calc_bond_length(bond, coordDict) for bond in bonds]
     bondLengthDict = {bond[0]: bond[1] for bond in bondsLengthList}
 
+    # Edit bondLengthDict to make bonding atoms bond length zero
+    sortBondingAtoms = natsorted(bondingAtoms)
+    bondingAtomsBondID = []
+    for bond in bonds:
+        if bond[2] == sortBondingAtoms[0] and bond[3] == sortBondingAtoms[1]:
+            bondingAtomsBondID.append(bond[0])
+    if len(bondingAtomsBondID) > 0: # Stops this happening in pre-molecule cases before bond occurs
+        bondLengthDict[bondingAtomsBondID[0]] = 0.0
+
+    # Create graph of bonding atom pairs for bond path search
     moleculeGraph = fill_graph(atomIDs, bonds) 
 
+    totalBondDistanceList = []
+    for startAtom in atomIDs:
+        atomBondDistanceList = []
+        for otherAtom in atomIDs:
+            atomPath = breadth_first_search(moleculeGraph, startAtom, otherAtom)
+            bondPath = get_bond_path(atomPath, bonds)
+            pathDistance = calc_path_distance(bondPath, bondLengthDict)
+            atomBondDistanceList.append(pathDistance)
+        
+        totalBondDistanceList.append(atomBondDistanceList)
 
-    print('Reachable from: 22')
-    breadth_first_search(moleculeGraph, '22', '34')
+    bondDistanceMatrix = np.array(totalBondDistanceList)
+    
+    return bondDistanceMatrix
 
-    print()
-
-bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data')
+bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data', ['28', '62']) # 'new_post_rx1_molecule.data', ['32', '15']

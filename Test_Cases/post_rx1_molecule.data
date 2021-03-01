@@ -1,5 +1,5 @@
-# Bonding_Atoms  15 32
-# Edge_Atoms  1 3 17 23 38
+# Bonding_Atoms  32 15
+# Edge_Atoms  38 3 23 1 17
 
 20 atoms
 19 bonds

@@ -95,6 +95,7 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
 # Find bonds involving bonding atoms
     validAtomSet = set(bondingAtoms)
     edgeAtomSet = set()
+    edgeAtomList = []
     for bondAtom in bondingAtoms:
 
         # Make bondAtom a list
@@ -114,8 +115,12 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
             else:
                 # Determine which of the last obtained atom IDs have more bonds
                 # These atoms should be edge atoms
-                furthestAtomSet = set(newBondAtomList)
-                possibleEdgeAtoms = furthestAtomSet.difference(validAtomSet)
+                # furthestAtomSet = set(newBondAtomList)
+                # possibleEdgeAtoms = furthestAtomSet.difference(validAtomSet)
+
+                
+                # newBondAtomList at this point contains edge atoms of an order, and other atoms found before
+                possibleEdgeAtoms = [val for val in newBondAtomList if val not in validAtomSet]
                 
                 [validAtomSet.add(val) for val in newBondAtomList]
 
@@ -127,8 +132,9 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
                         if nextAtomID is not None:
                             bondCount += 1
                     if bondCount > 1: # All atoms will have at least one bond
-                        edgeAtomSet.add(searchAtom)
+                        edgeAtomList.append(searchAtom)
+                        # edgeAtomSet.add(searchAtom)
             
             # Increment iterator
             i += 1
-    return validAtomSet, edgeAtomSet
+    return validAtomSet, edgeAtomList
