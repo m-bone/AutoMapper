@@ -64,31 +64,13 @@ def calc_path_distance(bondList, bondDict):
     bondDistMultiple = reduce((lambda x, y: x * y), bondDistList)
     return bondDistMultiple
 
+# Classes and functions for search
 class Graph:
     def __init__(self):
         self.edges = {}
     
     def neighbours(self, id):
         return self.edges[id]
-
-
-def fill_graph(atomIDList, bondsList):
-    moleculeGraph = Graph()
-    boundAtomsList = []
-
-    for atom in atomIDList:
-        bondingAtoms = []
-        for bond in bondsList:
-            pairResult = pair_search(bond, atom)
-            if pairResult is not None:
-                bondingAtoms.append(pairResult)
-
-        boundAtomsList.append([atom, bondingAtoms])
-
-    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
-    moleculeGraph.edges = boundAtomsDict
-
-    return moleculeGraph
 
 class Queue:
     def __init__(self):
@@ -102,6 +84,27 @@ class Queue:
     
     def get(self):
         return self.elements.popleft()
+
+def fill_graph(atomIDList, bondsList):
+    # Load graph object
+    moleculeGraph = Graph()
+    boundAtomsList = []
+
+    # Determine what atoms are bound to an initial atom
+    for atom in atomIDList:
+        bondingAtoms = []
+        for bond in bondsList:
+            pairResult = pair_search(bond, atom)
+            if pairResult is not None:
+                bondingAtoms.append(pairResult)
+
+        boundAtomsList.append([atom, bondingAtoms])
+
+    # Create dictionary of initial atom keys and bound atom list values
+    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
+    moleculeGraph.edges = boundAtomsDict
+
+    return moleculeGraph
 
 def breadth_first_search(graph, start, target):
     # Shortcircuit to None path list if start and target are the same atom
@@ -170,6 +173,8 @@ def bond_distance_matrix(directory, fileName, bondingAtoms):
     # Create graph of bonding atom pairs for bond path search
     moleculeGraph = fill_graph(atomIDs, bonds) 
 
+    # For a starting atom calculate the path to all atoms, get the bond IDs that make this path
+    # calculate the bond distances and append to form a list of lists
     totalBondDistanceList = []
     for startAtom in atomIDs:
         atomBondDistanceList = []
@@ -181,8 +186,41 @@ def bond_distance_matrix(directory, fileName, bondingAtoms):
         
         totalBondDistanceList.append(atomBondDistanceList)
 
+    # Convert list of lists to numpy matrix
     bondDistanceMatrix = np.array(totalBondDistanceList)
     
     return bondDistanceMatrix
 
-bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data', ['28', '62']) # 'new_post_rx1_molecule.data', ['32', '15']
+preBondDistMat = bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data', ['28', '62'])
+postBondDistMat = bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_post_rx1_molecule.data', ['32', '15']) 
+
+searchRow = preBondDistMat[6]
+
+matchRow = postBondDistMat[16]
+
+diff = searchRow - matchRow
+
+sumDiff = np.sum(diff)
+
+print()
+
+distArrayList = []
+
+distDifference = []
+indexList = []
+
+for row in postBondDistMat:
+    # searchRow minus row
+    diffRow = searchRow - row
+    distArrayList.append(diffRow)
+    # diffRow = np.abs(diffRow)
+    # diffRow = np.log(diffRow)
+    # diffRow = np.nan_to_num(diffRow, neginf=0.0)
+
+    # Sum values
+    arraySum = np.sum(diffRow)
+
+    # Append
+    distDifference.append(arraySum)
+
+print()
