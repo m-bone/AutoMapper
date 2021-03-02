@@ -191,36 +191,113 @@ def bond_distance_matrix(directory, fileName, bondingAtoms):
     
     return bondDistanceMatrix
 
+def bond_path_matrix(directory, fileName, bondingAtoms):
+    os.chdir(directory)
+
+    # Load molecule file
+    with open(fileName, 'r') as f:
+        lines = f.readlines()
+
+    # Clean data and get coords and bonds
+    data = clean_data(lines)
+    sections = find_sections(data)
+    coords = get_data('Coords', data, sections)
+
+    atomIDs = [row[0] for row in coords]
+    bonds = get_data('Bonds', data, sections)
+
+    # Create graph of bonding atom pairs for bond path search
+    moleculeGraph = fill_graph(atomIDs, bonds) 
+
+    # Edit bondLengthDict to make bonding atoms bond length zero
+    sortBondingAtoms = natsorted(bondingAtoms)
+    bondingAtomsBondID = []
+    for bond in bonds:
+        if bond[2] == sortBondingAtoms[0] and bond[3] == sortBondingAtoms[1]:
+            bondingAtomsBondID.append(bond[0])
+    if len(bondingAtomsBondID) == 0: # Bogus bondID to allow later check to pass when handling pre-bond molecules
+        bondingAtomsBondID = [0.1] # BondID can never be a float
+
+    totalBondPathList = []
+    for startAtom in atomIDs:
+        atomBondPathList = []
+        for otherAtom in atomIDs:
+            atomPath = breadth_first_search(moleculeGraph, startAtom, otherAtom)
+            bondPath = get_bond_path(atomPath, bonds)
+            if atomPath[0] is not None and bondingAtomsBondID[0] not in bondPath: # Check path exists and doesn't use the bonding atoms bond
+                atomBondPathList.append(1.0)
+            else:
+                atomBondPathList.append(0.0)
+            
+        totalBondPathList.append(atomBondPathList)
+    
+    # Convert list of lists to numpy matrix
+    bondPathMatrix = np.array(totalBondPathList)
+    
+    return bondPathMatrix
+
+
+preBondPathMat = bond_path_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data', ['28', '62'])
+postBondPathMat = bond_path_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_post_rx1_molecule.data', ['32', '15'])
+
 preBondDistMat = bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data', ['28', '62'])
 postBondDistMat = bond_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_post_rx1_molecule.data', ['32', '15']) 
 
-searchRow = preBondDistMat[6]
+for index, atomRow in enumerate(postBondDistMat):
+    postBondDistMat[index][11] = 0.0
+    # postBondDistMat[index][7] = 0.0
 
-matchRow = postBondDistMat[16]
+from DistanceMatrix import gen_distance_matrix
 
-diff = searchRow - matchRow
+preDistMat, preAtomIDs = gen_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data')
+postDistMat, postAtomIDs = gen_distance_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_post_rx1_molecule.data')
 
-sumDiff = np.sum(diff)
+preBondMatrix = preBondDistMat * preDistMat
+postBondMatrix = postBondDistMat * postDistMat
+
+# searchIndex = 0
+
+# searchRow = preBondMatrix[searchIndex]
+
+# matchRow = postBondMatrix[16]
+
+# diff = searchRow - matchRow
+
+# sumDiff = np.sum(diff)
 
 print()
 
-distArrayList = []
+from sklearn.metrics import mean_absolute_error
 
-distDifference = []
-indexList = []
+for searchIndex, searchRow in enumerate(preBondMatrix):
+    searchRowIndex = np.argsort(searchRow)
+    # indexList.append(rowIndex)
 
-for row in postBondDistMat:
-    # searchRow minus row
-    diffRow = searchRow - row
-    distArrayList.append(diffRow)
-    # diffRow = np.abs(diffRow)
-    # diffRow = np.log(diffRow)
-    # diffRow = np.nan_to_num(diffRow, neginf=0.0)
+    searchRowSorted = np.take_along_axis(searchRow, searchRowIndex, axis=0)
+    distDifference = []
+    for row in postBondMatrix:
+        rowIndex = np.argsort(row)
+        # indexList.append(rowIndex)
 
-    # Sum values
-    arraySum = np.sum(diffRow)
+        rowSorted = np.take_along_axis(row, rowIndex, axis=0)
 
-    # Append
-    distDifference.append(arraySum)
+        # searchRow minus row
+        # diffRow = searchRowSorted - rowSorted
+        # diffRow = np.abs(diffRow)
+        # diffRow = np.log(diffRow)
+        # diffRow = np.nan_to_num(diffRow, neginf=0.0)
+
+        # Sum values
+        # finalVal = np.sum(diffRow)
+
+        # MAE
+        finalVal = mean_absolute_error(searchRowSorted, rowSorted)
+
+        # Append
+        distDifference.append(abs(finalVal))
+
+    val, idx = min((val, idx) for (idx, val) in enumerate(distDifference))
+
+    print(f'Atom {preAtomIDs[searchIndex]} is equivalent to atom {postAtomIDs[idx]}')
 
 print()
