@@ -1,7 +1,6 @@
 import os
 import math
 import numpy as np
-import matplotlib.pyplot as plt
 from natsort import natsorted
 from collections import deque
 from functools import reduce
