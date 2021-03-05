@@ -26,5 +26,4 @@ def charge_matrix(directory, fileName):
     return chargeMatrix
 
 
-pre_charge_matrix = charge_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data')
-print()
+# pre_charge_matrix = charge_matrix('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction/', 'new_start_molecule.data')

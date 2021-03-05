@@ -4,6 +4,23 @@ import numpy as np
 from LammpsSearchFuncs import get_data, find_sections
 from LammpsTreatmentFuncs import clean_data
 
+def get_atomIDs(directory, fileName):
+    os.chdir(directory)
+
+    # Load molecule file
+    with open(fileName, 'r') as f:
+        lines = f.readlines()
+
+    # Clean data and get coords
+    data = clean_data(lines)
+    sections = find_sections(data)
+    coords = get_data('Coords', data, sections)
+
+    # Collect atom IDs
+    atomIDs = [row[0] for row in coords]
+
+    return atomIDs
+
 def element_atomID_dict(directory, fileName, elementsByType):
     os.chdir(directory)
 
