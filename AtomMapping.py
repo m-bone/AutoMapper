@@ -7,16 +7,6 @@ from sklearn.metrics import mean_absolute_error
 from BondDistanceMatrix import bond_distance_matrix
 from MappingFunctions import element_atomID_dict, element_validation, get_atomIDs
 
-# File search constants and user inputs
-DATA_DIR = os.getcwd() + '/Test_Cases'
-PRE_FILE_NAME = 'new_start_molecule.data'
-POST_FILE_NAME = 'new_post_rx1_molecule.data'
-ELEMENT_BY_TYPE = ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O']
-PRE_BONDING_ATOMS = ['28', '62']
-POST_BONDING_ATOMS = ['32', '15']
-POST_MAJOR_MOVED_ATOMS = ['33']
-POST_MINOR_MOVED_ATOMS = ['16']
-
 
 def atom_mapping(DATA_DIR, PRE_FILE_NAME, POST_FILE_NAME, ELEMENT_BY_TYPE, PRE_BONDING_ATOMS, POST_BONDING_ATOMS, POST_MAJOR_MOVED_ATOMS, POST_MINOR_MOVED_ATOMS):
     _WEIGHT_COEFF = 0.0
@@ -24,7 +14,7 @@ def atom_mapping(DATA_DIR, PRE_FILE_NAME, POST_FILE_NAME, ELEMENT_BY_TYPE, PRE_B
     preElements = element_atomID_dict(DATA_DIR, PRE_FILE_NAME, ELEMENT_BY_TYPE)
     postElements = element_atomID_dict(DATA_DIR, POST_FILE_NAME, ELEMENT_BY_TYPE)
 
-    # Get atomIDs - using existing function for now 
+    # Get atomIDs
     preAtomIDs = get_atomIDs(DATA_DIR, PRE_FILE_NAME)
     postAtomIDs = get_atomIDs(DATA_DIR, POST_FILE_NAME)
 

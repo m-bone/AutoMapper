@@ -34,9 +34,10 @@ correctDgebaDetda = [['38'], ['39'], ['35'], ['41', '42'], ['42', '41'], ['32'],
 dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
 
 # Ethyl Ethanoate
-ethylEthanoate = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], ['6', '11'], ['7', '2'], ['17', '15', '16'], [])
+ethylEthanoate = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], ['6', '11'], ['7', '2'], [], [])
 correctEthylEthanoate = [['9'], ['8'], ['12', '13', '14'], ['13', '12', '14'], ['14', '12', '13'], ['7'], ['10', '11'], ['11', '10'], ['17', '16'], ['1'], ['2'], ['3', '4', '5'], ['4', '3', '5'], ['5', '3', '4'], ['15'], ['16', '17'], ['6']]
 ethylEthanoate.test_report(correctEthylEthanoate, 'Ethyl Ethanoate')
+
 
 # Nothing reasonable got given 13, too many 14 including some across the molecule boundary
 # 15 given 2 should be impossible for multiple reasons - 15 is O, 2 is C and 2 is a bonding atom
