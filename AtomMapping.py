@@ -19,8 +19,8 @@ def atom_mapping(DATA_DIR, PRE_FILE_NAME, POST_FILE_NAME, ELEMENT_BY_TYPE, PRE_B
     postAtomIDs = get_atomIDs(DATA_DIR, POST_FILE_NAME)
 
     # Calculate bond distance matrices for pre and post molecule
-    preBondDistMat = bond_distance_matrix(DATA_DIR, PRE_FILE_NAME, PRE_BONDING_ATOMS)
-    postBondDistMat = bond_distance_matrix(DATA_DIR, POST_FILE_NAME, POST_BONDING_ATOMS) 
+    preBondDistMat = bond_distance_matrix(DATA_DIR, PRE_FILE_NAME, PRE_BONDING_ATOMS, powerBonds=False)
+    postBondDistMat = bond_distance_matrix(DATA_DIR, POST_FILE_NAME, POST_BONDING_ATOMS, powerBonds=False) 
 
     # Set value for hydrogen that moves to epoxide ring to zero - this will be automated / user supplied info in the future
     for atom in POST_MAJOR_MOVED_ATOMS:
