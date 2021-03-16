@@ -51,7 +51,7 @@ def get_bond_path(atomList, bonds):
 
     return bondIDList
 
-def calc_path_distance(bondList, bondDict):
+def calc_path_distance(bondList, bondDict, powers):
     # If bondList is empty return zero
     if len(bondList) == 0:
         return 0.0
@@ -59,6 +59,9 @@ def calc_path_distance(bondList, bondDict):
     bondDistList = []
     for bondID in bondList:
         bondDistList.append(bondDict[bondID])
+
+    if powers:
+        bondDistList = [bond ** (index + 1) for index, bond in enumerate(bondDistList)]
 
     bondDistMultiple = reduce((lambda x, y: x * y), bondDistList)
     return bondDistMultiple
@@ -139,7 +142,7 @@ def breadth_first_search(graph, start, target):
 
     return path
 
-def bond_distance_matrix(directory, fileName, bondingAtoms):
+def bond_distance_matrix(directory, fileName, bondingAtoms, powerBonds=False):
     os.chdir(directory)
 
     # Load molecule file
@@ -180,7 +183,7 @@ def bond_distance_matrix(directory, fileName, bondingAtoms):
         for otherAtom in atomIDs:
             atomPath = breadth_first_search(moleculeGraph, startAtom, otherAtom)
             bondPath = get_bond_path(atomPath, bonds)
-            pathDistance = calc_path_distance(bondPath, bondLengthDict)
+            pathDistance = calc_path_distance(bondPath, bondLengthDict, powerBonds)
             atomBondDistanceList.append(pathDistance)
         
         totalBondDistanceList.append(atomBondDistanceList)

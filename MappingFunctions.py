@@ -40,22 +40,24 @@ def element_atomID_dict(directory, fileName, elementsByType):
 
     return elementIDDict
 
-def element_validation(preAtomID, postAtomIDList, differenceList, preElementDict, postElementDict):
+def element_validation(preAtomID, postAtomIDList, differenceList, preElementDict, postElementDict, postBondingAtoms):
     # Make a copy of unchanged differenceList
     originalDifferenceList = differenceList.copy()
 
-    checkElement = 1
-
     # Find lowest difference post atom ID that is the same element as the pre atom ID
+    checkElement = 1
     while checkElement:
         # Find smallest value and corresponding index
         val, idx = min((val, idx) for (idx, val) in enumerate(differenceList))
         # Find the smallest value's index in the original list
         originalIndex = originalDifferenceList.index(val)
 
-        # If elements are the same return the pre and post atom IDs 
-        if preElementDict[preAtomID] == postElementDict[postAtomIDList[originalIndex]]:
-            return preAtomID, postAtomIDList[originalIndex]
+        if postAtomIDList[originalIndex] in postBondingAtoms:
+            # If chosen ID is one of the bondingAtoms, it's wrong so can be removed
+            del differenceList[idx]
+        elif preElementDict[preAtomID] == postElementDict[postAtomIDList[originalIndex]]:
+            # If elements are the same return the pre and post atom IDs
+            return preAtomID, postAtomIDList[originalIndex], originalIndex
         else:
             # If the elements are different delete the smallest value by index and try again
             del differenceList[idx]
