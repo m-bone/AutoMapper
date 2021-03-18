@@ -110,6 +110,11 @@ class Atom():
         self.NeighbourElements = [elementDict[atomID] for atomID in self.NeighbourIDs]
 
     def map_elements(self, atomObject):
+        """
+        TO DO: How to handle multiple different atoms between base and target data?
+            e.g. base and target are the same length but pre is H O H C and post is H C H C
+        """
+
         # Output variables
         mapList = []
         missingPreAtoms = []
@@ -119,35 +124,44 @@ class Atom():
         postHydrogenIDList = []
         createHydrogenList = True
 
-        for index, neighbour in enumerate(self.NeighbourElements):
-            # Count from the longest neighbour list, but use the atomObject list if both lists are equal length
-            if len(self.NeighbourElements) > len(atomObject.NeighbourElements):              
-                elementOccurence = self.NeighbourElements.count(neighbour)
-                # primaryData = atomObject
-                # secondaryData = self
-            else:
-                elementOccurence = atomObject.NeighbourElements.count(neighbour)
-                # primaryData = self
-                # secondaryData = atomObject
+        # Loop from the shortest neighbour list, but use the atomObject list as the target if both lists are equal length
+        #   Not sure this system is the one. Is kinda goofy. Need something that can correctly identify moved/missing atoms and
+        #   put them in the correct bin. Bins will then be handled later.
+        switchOrder = False
+        if len(self.NeighbourElements) < len(atomObject.NeighbourElements):              
+            baseData = atomObject # Names are crap
+            targetData = self
+            switchOrder = True
+        else:
+            baseData = self
+            targetData = atomObject
 
-            if elementOccurence == 0:
+        # Loop through neighbours for atom in one state and compare to neighbours of atom in other state
+        for index, neighbour in enumerate(baseData.NeighbourElements):
+            elementOccurence = targetData.NeighbourElements.count(neighbour)
+
+            if elementOccurence == 0: # If element isn't there - needs to go in the correct missing atom bin
                 continue
-            elif elementOccurence == 1:
-                matchIndex = atomObject.NeighbourElements.index(neighbour)
-                mapList.append([self.NeighbourIDs[index], atomObject.NeighbourIDs[matchIndex]])
+            elif elementOccurence == 1: # Assign atomIDs if there is only one matching element - could this go wrong if an element moves and an identical element takes its place?
+                matchIndex = targetData.NeighbourElements.index(neighbour)
+                mapList.append([baseData.NeighbourIDs[index], targetData.NeighbourIDs[matchIndex]])
             elif elementOccurence > 1:
-                if neighbour == 'H':
+                if neighbour == 'H': # H can be handled simply as all H are equivalent to each other in this case - ignores chirality
                     if createHydrogenList:
                         createHydrogenList = False
-                        postHydrogenIDList = [atomObject.NeighbourIDs[index] for index, element in enumerate(atomObject.NeighbourElements) if element == 'H']
-                    elif createHydrogenList == False and len(postHydrogenIDList) == 0:
-                        missingPreAtoms.append(self.NeighbourIDs[index])
-                        continue
+                        postHydrogenIDList = [targetData.NeighbourIDs[index] for index, element in enumerate(targetData.NeighbourElements) if element == 'H']
 
-                    mapList.append([self.NeighbourIDs[index], postHydrogenIDList.pop()])
+                    mapList.append([baseData.NeighbourIDs[index], postHydrogenIDList.pop()])
                 else:
+                    # To come
                     print("AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
 
+        # Identify missed atoms
+        missingAtoms = 1
+
+        # Switch map list order to make it [PreAtomID, PostAtomID]
+        if switchOrder:
+            mapList = [[row[1], row[0]] for row in mapList]
         return mapList, missingPreAtoms
 
 def path_search(directory, fileName, bondingAtoms, elementsByType):
@@ -207,6 +221,9 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
         queue = Queue()
         queue.put([preStartAtom, postStartAtom])
 
+        # Further iterations of this loop are going to need to queue with atomIDs so the correct pre and post neighbours can be compared
+        # Would fail if it tried to compare two atom centres that aren't the confirmed equivalent map
+
         while not queue.empty():
             currentAtoms = queue.get()
             for mainIndex, atom in enumerate(currentAtoms):
@@ -216,6 +233,7 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
             newMap, missingPreAtoms = currentAtoms[0].map_elements(currentAtoms[1])
             print()
 
+            
 def breadth_first_search(graph, start, target):    
     # This code and associated classes is adapted from from https://www.redblobgames.com/pathfinding/a-star/introduction.html
     # and https://www.redblobgames.com/pathfinding/a-star/implementation.html
