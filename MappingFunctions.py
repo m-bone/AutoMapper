@@ -1,4 +1,5 @@
 import os
+import math
 import numpy as np
 
 from LammpsSearchFuncs import get_data, find_sections
@@ -61,3 +62,41 @@ def element_validation(preAtomID, postAtomIDList, differenceList, preElementDict
         else:
             # If the elements are different delete the smallest value by index and try again
             del differenceList[idx]
+
+def calc_angles(atomID, angleList, coordList):
+    validAngles = [angle[2:] for angle in angleList if atomID in angle[2:]]
+    coordDict = {row[0]: row[1:] for row in coordList}
+
+    coordsForAngles = []
+    for angle in validAngles:
+        angleCoords = []
+        for atom in angle:
+            coordList = coordDict[atom]
+            coordList = [float(coord) for coord in coordList]
+            angleCoords.append(coordList)
+
+        coordsForAngles.append(angleCoords)
+
+    totalAngles = []
+    for angle in coordsForAngles:
+        a1 = np.array(angle[0])
+        a2 = np.array(angle[1])
+        a3 = np.array(angle[2])
+
+        # Calculate magnitude of vectors - Calc bond length
+        bondOne = math.sqrt((a1[0] - a2[0])**2 + (a1[1] - a2[1])**2 + (a1[2] - a2[2])**2)
+        bondTwo = math.sqrt((a2[0] - a3[0])**2 + (a2[1] - a3[1])**2 + (a2[2] - a3[2])**2)
+
+        # Adjust vectors for origin (the middle atom)
+        vectorOne = a1 - a2
+        vectorTwo = a3 - a2
+
+        # Dot product of the vectors
+        dotProd = np.dot(vectorOne, vectorTwo)
+
+        # Angle calculation
+        angle = dotProd / (bondOne*bondTwo)
+        angle = np.degrees(np.arccos(angle))
+        totalAngles.append(angle)
+    
+    return totalAngles
