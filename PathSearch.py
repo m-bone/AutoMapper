@@ -10,13 +10,6 @@ from LammpsTreatmentFuncs import clean_data
 from MappingFunctions import element_atomID_dict, calc_angles
 
 # Classes and functions for search
-class Graph:
-    def __init__(self):
-        self.edges = {}
-    
-    def neighbours(self, id):
-        return self.edges[id]
-
 class Queue:
     def __init__(self):
         self.elements = deque()
@@ -30,27 +23,6 @@ class Queue:
     
     def get(self):
         return self.elements.popleft()
-
-def fill_graph(atomIDList, bondsList):
-    # Load graph object
-    moleculeGraph = Graph()
-    boundAtomsList = []
-
-    # Determine what atoms are bound to an initial atom
-    for atom in atomIDList:
-        bondingAtoms = []
-        for bond in bondsList:
-            pairResult = pair_search(bond, atom)
-            if pairResult is not None:
-                bondingAtoms.append(pairResult)
-
-        boundAtomsList.append([atom, bondingAtoms])
-
-    # Create dictionary of initial atom keys and bound atom list values
-    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
-    moleculeGraph.edges = boundAtomsDict
-
-    return moleculeGraph
 
 def get_neighbours(atomIDList, bondsList):
     boundAtomsList = []
@@ -71,8 +43,9 @@ def get_neighbours(atomIDList, bondsList):
     return boundAtomsDict
 
 class Atom():
-    def __init__(self, atomID, bondingAtom, NeighbourIDs):
+    def __init__(self, atomID, element, bondingAtom, NeighbourIDs):
         self.atomID = atomID
+        self.element = element
         self.bondingAtom = bondingAtom
         self.NeighbourIDs = NeighbourIDs
         self.NeighbourElements = []
@@ -162,7 +135,7 @@ class Atom():
 
         return mapList, missingPreAtoms, missingPostAtoms, queueAtoms
 
-def build_atom_objects(directory, fileName, bondingAtoms, elementsByType):
+def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
     os.chdir(directory)
 
     # Load molecule file
@@ -181,13 +154,13 @@ def build_atom_objects(directory, fileName, bondingAtoms, elementsByType):
     neighboursDict = get_neighbours(atomIDs, bonds)
 
     atomList = []
-    for atom in atomIDs:
-        neighbours = neighboursDict[atom]
-        if atom in bondingAtoms:
+    for atomID in atomIDs:
+        neighbours = neighboursDict[atomID]
+        if atomID in bondingAtoms:
             bondingAtom = True
         else:
             bondingAtom = False
-        atom = Atom(atom, bondingAtom, neighbours)
+        atom = Atom(atomID, elementDict[atomID], bondingAtom, neighbours)
         atomList.append(atom)
     
     return atomList
@@ -199,13 +172,14 @@ def get_atom_object(atomID, atomList):
             return atom
 
 def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementsByType):
-    preAtomObjectList = build_atom_objects(directory, preFileName, preBondingAtoms, elementsByType)
-    postAtomObjectList = build_atom_objects(directory, postFileName, postBondingAtoms, elementsByType)
-
     # Build atomID to element dict
     preElementDict = element_atomID_dict(directory, preFileName, elementsByType)
     postElementDict = element_atomID_dict(directory, postFileName, elementsByType)
     elementDictList = [preElementDict, postElementDict]
+
+    # Generate atom class objects list
+    preAtomObjectList = build_atom_objects(directory, preFileName, preBondingAtoms, preElementDict)
+    postAtomObjectList = build_atom_objects(directory, postFileName, postBondingAtoms, postElementDict)
 
     # Initialise lists
     mappedIDList = []
@@ -221,12 +195,11 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
         preStartAtom = get_atom_object(preBondAtom, preAtomObjectList)
         postStartAtom = get_atom_object(postBondingAtoms[bondingIndex], postAtomObjectList)
         
+        # Start queue and add pre and post starting atoms
         queue = Queue()
         queue.add([[preStartAtom, postStartAtom]])
 
-        # Further iterations of this loop are going to need to queue with atomIDs so the correct pre and post neighbours can be compared
-        # Would fail if it tried to compare two atom centres that aren't the confirmed equivalent map
-
+        # Search through queue creating new maps based on all elements in a given path
         while not queue.empty():
             currentAtoms = queue.get()
             for mainIndex, atom in enumerate(currentAtoms):
@@ -250,14 +223,49 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
             # Add new pairs to mapped ID list
             mappedIDList.extend(newMap)
 
+    # Handle missing atoms
+    # Update lists to remove any atoms that have been assigned and convert IDs into atom objects
+    # missingPreAtomsObjects = []
+    # missingPostAtomsObjects = []
+    # mappedPreAtoms = [pair[0] for pair in mappedIDList]
+    # mappedPostAtoms = [pair[1] for pair in mappedIDList]
 
-    print()
+    # for atom in missingPreAtomsList:
+    #     if atom not in mappedPreAtoms:
+    #         atomsObject = get_atom_object(atom, preAtomObjectList)
+    #         missingPreAtomsObjects.append(atomsObject)
+
+    # for atom in missingPostAtomsList:
+    #     if atom not in mappedPostAtoms:
+    #         atomsObject = get_atom_object(atom, postAtomObjectList)
+    #         missingPostAtomsObjects.append(atomsObject)
 
 
-map_from_path('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['28', '62'], ['32', '15'], ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'])
+    # missingPostAtomElements = [atom.element for atom in missingPostAtomsObjects]
+    # for index, preAtom in enumerate(missingPreAtomsObjects):
+    #     elementOccurence = missingPostAtomElements.count(preAtom.element)
+
+    #     if elementOccurence == 0:
+    #         print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
+
+    #     elif elementOccurence == 1:
+    #         postIndex = missingPostAtomElements.index(preAtom.element)
+    #         mappedIDList.append([preAtom.atomID, missingPostAtomsObjects[postIndex].atomID])
+
+    #     elif elementOccurence > 1:
+    #         print(f"Too many element matches in post missing atom for {preAtom.atomID}")
+
+    return mappedIDList
+    
+# map_from_path('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['28', '62'], ['32', '15'], ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'])
+
+# THURSDAY
+# Missing atoms starting to work but unsure of messages produced by the prints - IDs seem to be nonsense
+# Will take a lot more code in missing atoms to make it robust enough - possible revert points, multiple assignment of ID is possible currently
 
 # Could add edge atom T/F to atom class, could help distinguish elements of same type
 
 # Validation Checks:
 # No repeated IDs / No IDs unassigned
 # Ambiguous groups maintained pre and post aside from moved atoms
+# Check that atom assigned from missingatoms is bound to the atoms that it expects to be bound to

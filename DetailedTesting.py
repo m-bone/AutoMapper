@@ -1,8 +1,9 @@
 from AtomMapping import atom_mapping
+from PathSearch import map_from_path
 
 class Reaction:
-    def __init__(self, directory, preFileName, postFileName, elementByType, preBondingAtoms, postBondingAtoms, postMajorMovedAtoms, postMinorMovedAtoms):
-        self.mappedIDList = atom_mapping(directory, preFileName, postFileName, elementByType, preBondingAtoms, postBondingAtoms, postMajorMovedAtoms, postMinorMovedAtoms)
+    def __init__(self, directory, preFileName, postFileName, elementByType, preBondingAtoms, postBondingAtoms):
+        self.mappedIDList = map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementByType)
 
     def test_report(self, correctPostAtomIDs, reactionName):
         print(f'\n\nReaction: {reactionName}')
@@ -14,8 +15,8 @@ class Reaction:
         totalAtoms = len(correctPostAtomIDs)
         correctAtoms = 0
         incorrectPreAtomsList = []
-        for index, atom in enumerate(self.mappedIDList):
-            if atom[1] in correctPostAtomIDs[index]:
+        for atom in self.mappedIDList:
+            if atom[1] in correctPostAtomIDs[atom[0]]:
                 correctAtoms += 1
             else:
                 incorrectPreAtomsList.append(atom[0])
@@ -24,23 +25,110 @@ class Reaction:
         repeatedPostIDs = [val for val in mappedPostAtomsList if mappedPostAtomsList.count(val) > 1]
 
         print(f'Total atoms: {totalAtoms}. Correct atoms: {correctAtoms}. Accuracy: {round(correctAtoms / totalAtoms * 100, 1)}%')
-        print(f'Incorrect premolecule atomIDs: {incorrectPreAtomsList}')
-        print(f'Repeated Atoms: {repeatedPostIDs}, Count: {len(repeatedPostIDs)}')
+        print(f'Incorrectly assigned premolecule atomIDs: {incorrectPreAtomsList}, Count {len(incorrectPreAtomsList)}')
+        print(f'Repeated Atoms: {repeatedPostIDs}, Count: {len(repeatedPostIDs)}\n\n')
 
 # DGEBA-DETDA
 dgebaDetda = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'],
-['28', '62'], ['32', '15'], ['33'], ['16'])
-correctDgebaDetda = [['38'], ['39'], ['35'], ['41', '42'], ['42', '41'], ['32'], ['16'], ['5', '36'], ['36', '5'], ['37'], ['6', '9'], ['4'], ['1', '3'], ['3', '1'], ['9', '6'], ['17', '23'], ['23', '17'], ['15'], ['33', '34'], ['34', '33']]
+['28', '62'], ['32', '15'])
+correctDgebaDetda = {
+    '28': ['32'],
+    '62': ['15'],
+    '35': ['36', '5'],
+    '36': ['36', '5'],
+    '25': ['35'],
+    '37': ['37'],
+    '34': ['16'],
+    '24': ['39'],
+    '26': ['41', '42'],
+    '27': ['41', '42'],
+    '22': ['38'],
+    '63': ['33', '34'],
+    '64': ['33', '34'],
+    '51': ['4'],
+    '50': ['6', '9'],
+    '55': ['6', '9'],
+    '56': ['17'],
+    '60': ['23'],
+    '52': ['1'],
+    '54': ['3']
+}
 dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
 
 # Ethyl Ethanoate
-ethylEthanoate = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], ['6', '11'], ['7', '2'], [], [])
-correctEthylEthanoate = [['9'], ['8'], ['12', '13', '14'], ['13', '12', '14'], ['14', '12', '13'], ['7'], ['10', '11'], ['11', '10'], ['17', '16'], ['1'], ['2'], ['3', '4', '5'], ['4', '3', '5'], ['5', '3', '4'], ['15'], ['16', '17'], ['6']]
+ethylEthanoate = Reaction(
+    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 
+    'pre-molecule.data', 
+    'post-molecule.data', 
+    ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], 
+    ['6', '11'], 
+    ['7', '2']
+)
+correctEthylEthanoate = {
+    '11': ['2'],
+    '6': ['7'],
+    '10': ['1'],
+    '12': ['3', '4', '5'],
+    '13': ['3', '4', '5'],
+    '14': ['3', '4', '5'],
+    '17': ['6'],
+    '2': ['8'],
+    '7': ['10', '11'],
+    '8': ['10', '11'],
+    '1': ['9'],
+    '3': ['12', '13', '14'],
+    '4': ['12', '13', '14'],
+    '5': ['12', '13', '14'],
+    # Water molecule atoms
+    '9': ['17', '16'],
+    '16': ['17', '16'],
+    '15': ['15']
+}
 ethylEthanoate.test_report(correctEthylEthanoate, 'Ethyl Ethanoate')
 
+# 15pre maps to 6post instead of 17pre. This is correct as far as the code is concerned, but is the wrong map.
+# Need to test what LAMMPS does when it receives a wrong assignment like this - will it error?
 
-# Nothing reasonable got given 13, too many 14 including some across the molecule boundary
-# 15 given 2 should be impossible for multiple reasons - 15 is O, 2 is C and 2 is a bonding atom
+
+# Methane to Ethane 
+ethane = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Methane_Ethane/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'C'], ['1', '6'], ['1', '2'])
+correctEthane = {
+    '1': ['1'],
+    '2': ['6', '7', '8'],
+    '3': ['6', '7', '8'],
+    '4': ['6', '7', '8'],
+    '5': ['9', '10'],
+    '6': ['2'],
+    '7': ['3', '4', '5'],
+    '8': ['3', '4', '5'],
+    '9': ['3', '4', '5'],
+    '10': ['9', '10'], 
+}
+ethane.test_report(correctEthane, 'Methane to Ethane')
+
+# LAMMPS Example - Nylon 6,6
+nylon = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Nylon6-6', 'rxn1_stp1_unreacted.data_template', 'rxn1_stp1_reacted.data_template', ['C', 'N', 'H', 'H', 'C', 'O', 'H', 'O', 'N', 'H', 'O'], ['10', '1'], ['10', '1'])
+correctNylon = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3'],
+    '4': ['4', '5'],
+    '5': ['4', '5'],
+    '6': ['6', '7'],
+    '7': ['6', '7'],
+    '8': ['8'],
+    '9': ['9'],
+    '10': ['10'],
+    '11': ['11'],
+    '12': ['12'],
+    '13': ['13', '14'],
+    '14': ['13', '14'],
+    '15': ['15'],
+    '16': ['16'],
+    '17': ['17', '18'],
+    '18': ['17', '18'],
+}
+nylon.test_report(correctNylon, 'Nylon Melt Lammps Example')
 
 # Validation idea
 # Search for ambiguous groups in the post molecule by comparing post atom to all post atoms
