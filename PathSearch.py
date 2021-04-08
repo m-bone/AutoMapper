@@ -5,7 +5,7 @@ from natsort import natsorted
 from collections import deque
 from functools import reduce
 
-from LammpsSearchFuncs import get_data, find_sections, pair_search
+from LammpsSearchFuncs import get_data, find_sections, pair_search, get_neighbours
 from LammpsTreatmentFuncs import clean_data
 from MappingFunctions import element_atomID_dict, calc_angles
 
@@ -23,24 +23,6 @@ class Queue:
     
     def get(self):
         return self.elements.popleft()
-
-def get_neighbours(atomIDList, bondsList):
-    boundAtomsList = []
-
-    # Determine what atoms are bound to an initial atom
-    for atom in atomIDList:
-        bondingAtoms = []
-        for bond in bondsList:
-            pairResult = pair_search(bond, atom)
-            if pairResult is not None:
-                bondingAtoms.append(pairResult)
-
-        boundAtomsList.append([atom, bondingAtoms])
-
-    # Create dictionary of initial atom keys and bound atom list values
-    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
-
-    return boundAtomsDict
 
 class Atom():
     def __init__(self, atomID, element, bondingAtom, NeighbourIDs):
@@ -167,9 +149,27 @@ def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
 
 # Returns atom class object that has specific atom ID
 def get_atom_object(atomID, atomList):
+    '''
+    Returns the atom object for a specific atom ID. Potential uses include for turning queue
+    atom IDs into atom objects for next stage of queue processing.
+    Args:
+        atomID: An integer atom ID
+        atomList: List of all possible atom objects, either pre- or post-bond
+
+    Returns:
+        Atom object
+    '''
     for atom in atomList:
         if atom.atomID == atomID:
             return atom
+
+def add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList):
+    queueAtomObjects = []
+    for pair in queueAtoms:
+        preAtom = get_atom_object(pair[0], preAtomObjectList)
+        postAtom = get_atom_object(pair[1], postAtomObjectList)
+        queueAtomObjects.append([preAtom, postAtom])
+    queue.add(queueAtomObjects)
 
 def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementsByType):
     # Build atomID to element dict
@@ -209,12 +209,7 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
             newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1])
 
             # Convert queue atoms to atom class objects and to queue
-            queueAtomObjects = []
-            for pair in queueAtoms:
-                preAtom = get_atom_object(pair[0], preAtomObjectList)
-                postAtom = get_atom_object(pair[1], postAtomObjectList)
-                queueAtomObjects.append([preAtom, postAtom])
-            queue.add(queueAtomObjects)
+            add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
 
             # Extend missing lists
             missingPreAtomsList.extend(missingPreAtoms)
@@ -259,8 +254,7 @@ def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBon
     
 # map_from_path('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['28', '62'], ['32', '15'], ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'])
 
-# THURSDAY
-# Missing atoms starting to work but unsure of messages produced by the prints - IDs seem to be nonsense
+
 # Will take a lot more code in missing atoms to make it robust enough - possible revert points, multiple assignment of ID is possible currently
 
 # Could add edge atom T/F to atom class, could help distinguish elements of same type

@@ -20,12 +20,7 @@ import re
 # Get data
 def get_data(sectionName, lines, sectionIndexList):
     # Checks that section name is existing in LAMMPS data
-    try:
-        startIndex = lines.index(sectionName)
-    except ValueError:
-        # If doesn't exist, return empty list that can be added as normal to main list later
-        data = []
-        return data
+    startIndex = lines.index(sectionName)
 
     endIndex = sectionIndexList[sectionIndexList.index(startIndex) + 1]
     
@@ -74,6 +69,10 @@ def find_sections(lines):
 
 # Search bond pair
 def pair_search(bond, bondAtom):
+    '''
+    Check if either atomID in a bond is the desired atomID.
+    Will return None if no match is found.
+    '''
     if bond[2] == bondAtom:
         return bond[3]
     elif bond[3] == bondAtom:
@@ -94,8 +93,8 @@ def search_loop(bonds, bondAtom):
 def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
 # Find bonds involving bonding atoms
     validAtomSet = set(bondingAtoms)
-    edgeAtomSet = set()
     edgeAtomList = []
+
     for bondAtom in bondingAtoms:
 
         # Make bondAtom a list
@@ -104,25 +103,22 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
         i = 1
         while i <= bondDistance:
             newBondAtomList = search_loop(originalBonds, newBondAtomList)
-            if i == 1:
-                # Stop search from finding other bonding atom if they are bound together
+            if i == 1: # First pass - Stop search from finding other bonding atom if they are bound together
                 newBondAtomList = [val for val in newBondAtomList if val not in bondingAtoms]
 
-            if i < bondDistance:
-                # Add list as individual elements
-                [validAtomSet.add(val) for val in newBondAtomList]
+            if i < bondDistance: # Before bond distance is reached
+                # Add list as individual elements 
+                for atom in newBondAtomList:
+                    validAtomSet.add(atom)
 
-            else:
-                # Determine which of the last obtained atom IDs have more bonds
-                # These atoms should be edge atoms
-                # furthestAtomSet = set(newBondAtomList)
-                # possibleEdgeAtoms = furthestAtomSet.difference(validAtomSet)
-
-                
+            else: # Once bond distance is reached
+                # Determine which of the last obtained atom IDs have further bonds               
                 # newBondAtomList at this point contains edge atoms of an order, and other atoms found before
                 possibleEdgeAtoms = [val for val in newBondAtomList if val not in validAtomSet]
-                
-                [validAtomSet.add(val) for val in newBondAtomList]
+
+                # Add list as individual elements - has to be after possibleEdgeAtoms
+                for atom in newBondAtomList:
+                    validAtomSet.add(atom)
 
                 # Run another loop to determine if possibleEdgeAtoms have other bonds
                 for searchAtom in possibleEdgeAtoms:
@@ -133,8 +129,35 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
                             bondCount += 1
                     if bondCount > 1: # All atoms will have at least one bond
                         edgeAtomList.append(searchAtom)
-                        # edgeAtomSet.add(searchAtom)
             
             # Increment iterator
             i += 1
-    return validAtomSet, edgeAtomList
+
+    # Get edge atom neighbours
+    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBonds)
+    
+    # Filter out validAtomIDs that are within the partial structure
+    filteredFingerprintDict = {}
+    for key, atomList in edgeAtomFingerprintDict.items():
+        cutList = [atom for atom in atomList if atom not in validAtomSet]
+        filteredFingerprintDict[key] = cutList
+
+    return validAtomSet, edgeAtomList, filteredFingerprintDict
+
+def get_neighbours(atomIDList, bondsList):
+    boundAtomsList = []
+
+    # Determine what atoms are bound to an initial atom
+    for atom in atomIDList:
+        bondingAtoms = []
+        for bond in bondsList:
+            pairResult = pair_search(bond, atom)
+            if pairResult is not None:
+                bondingAtoms.append(pairResult)
+
+        boundAtomsList.append([atom, bondingAtoms])
+
+    # Create dictionary of initial atom keys and bound atom list values
+    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
+
+    return boundAtomsDict

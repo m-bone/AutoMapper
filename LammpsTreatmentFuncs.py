@@ -56,7 +56,7 @@ def clean_settings(lines):
 
     return lines
 
-def refine_data(data, searchIndex: list, IDset):
+def refine_data(data, searchIndex: list, IDset, newAtomIDs=None):
     '''
     Search multiple indices for matching atomID value.
     If match is found keep that list row in the data.
@@ -91,7 +91,21 @@ def refine_data(data, searchIndex: list, IDset):
     # Re-sort validData by ID, use natsort as values are str not int
     validData = natsorted(validData, key=itemgetter(0))
     
-    return validData
+    # Determine new atomIDs from 1:len(data), required for LAMMPS
+    if newAtomIDs is None:
+        renumberedAtomIDDict = {atomID[0]: str(val) for val, atomID in enumerate(validData, start=1)}
+        for index, row in enumerate(validData, start=1):
+            row[0] = str(index)
+
+        return validData, renumberedAtomIDDict
+    
+    # If dict provided then use it to update the atom IDs from old to new
+    else:
+        for rowInd, row in enumerate(validData, start=1):
+            row[0] = str(rowInd)
+            for index in searchIndex:
+                row[index] = newAtomIDs[row[index]]
+        return validData
 
 def add_section_keyword(sectionName, data):
     # Don't add keyword if list is empty - empty list means no section in file
@@ -122,3 +136,19 @@ def format_comment(IDlist, comment):
     atomString = [' '.join(atomList)] # Has to be list of lists to pass through later code
 
     return atomString
+
+# Convert edge atom fingerprints from atom IDs to element strings
+def edge_atom_fingerprint_strings(edgeAtomFingerprintDict, elementsByTypeDict):
+    edgeElementFingerprintDict = {}
+    for key, atomList in edgeAtomFingerprintDict.items():
+        cutList = [elementsByTypeDict[atom] for atom in atomList]
+
+        # Sort list alphabetically
+        cutList = natsorted(cutList)
+
+        # Join list to single string
+        cutList = ''.join(cutList)
+
+        edgeElementFingerprintDict[key] = cutList
+
+    return edgeElementFingerprintDict
