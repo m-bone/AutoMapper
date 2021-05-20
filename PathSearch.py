@@ -5,7 +5,7 @@ from natsort import natsorted
 from collections import deque
 from functools import reduce
 
-from LammpsSearchFuncs import get_data, find_sections, pair_search, get_neighbours
+from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, pair_search, get_neighbours
 from LammpsTreatmentFuncs import clean_data
 from MappingFunctions import element_atomID_dict, calc_angles
 
@@ -117,7 +117,7 @@ class Atom():
 
         return mapList, missingPreAtoms, missingPostAtoms, queueAtoms
 
-def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
+def build_atom_objects(directory, fileName, elementDict):
     os.chdir(directory)
 
     # Load molecule file
@@ -133,7 +133,11 @@ def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
     bonds = get_data('Bonds', data, sections)
 
     # Get top comment info for bonding and edge atoms
-    #START HERE
+    topComments = get_top_comments(lines)
+    bondingAtoms = read_top_comments(topComments, 'Bonding_Atoms')
+    # edgeAtoms = read_top_comments(topComments, 'Edge_Atoms')
+    # edgeAtomFingerprints = read_top_comments(topComments, 'Edge_Atom_Fingerprints')
+
     # Build neighbours dict
     neighboursDict = get_neighbours(atomIDs, bonds)
 
@@ -147,7 +151,7 @@ def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
         atom = Atom(atomID, elementDict[atomID], bondingAtom, neighbours)
         atomList.append(atom)
     
-    return atomList
+    return atomList, bondingAtoms
 
 # Returns atom class object that has specific atom ID
 def get_atom_object(atomID, atomList):
@@ -173,15 +177,15 @@ def add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList):
         queueAtomObjects.append([preAtom, postAtom])
     queue.add(queueAtomObjects)
 
-def map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementsByType):
+def map_from_path(directory, preFileName, postFileName, elementsByType):
     # Build atomID to element dict
     preElementDict = element_atomID_dict(directory, preFileName, elementsByType)
     postElementDict = element_atomID_dict(directory, postFileName, elementsByType)
     elementDictList = [preElementDict, postElementDict]
 
     # Generate atom class objects list
-    preAtomObjectList = build_atom_objects(directory, preFileName, preBondingAtoms, preElementDict)
-    postAtomObjectList = build_atom_objects(directory, postFileName, postBondingAtoms, postElementDict)
+    preAtomObjectList, preBondingAtoms = build_atom_objects(directory, preFileName, preElementDict)
+    postAtomObjectList, postBondingAtoms = build_atom_objects(directory, postFileName, postElementDict)
 
     # Initialise lists
     mappedIDList = []

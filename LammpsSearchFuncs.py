@@ -66,6 +66,17 @@ def get_top_comments(data):
 
     return topComments
 
+def read_top_comments(topComments, commentTerm):
+    # Iterate through comments to find the one with the matching term
+    # Return remaining list of values
+    # If value is not in comments, None will be returned
+    for comment in topComments:
+        if commentTerm in comment:
+            # Delete comment term from list
+            cutComment = comment.copy()
+            cutComment.remove(commentTerm)
+            return cutComment
+
 def find_sections(lines):
     # Find index of section keywords - isalpha works as no spaces, newlines or punc in section keywords
     sectionIndexList = [lines.index(line) for line in lines if line.isalpha()]

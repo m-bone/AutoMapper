@@ -27,12 +27,12 @@ from LammpsToLammpsPartial import lammps_to_lammps_partial
 parser = argparse.ArgumentParser(description='Run preprocessing tools for LAMMPS simulation using fix bond/react')
 
 # List of arguments for command line
-parser.add_argument('directory', metavar='directory', type=str, nargs=1, help='Directory of file(s), can be got in bash with $PWD')
+parser.add_argument('directory', metavar='directory', type=str, nargs=1, help='Directory of file(s), can be found in bash with . or $PWD')
 parser.add_argument('tool', metavar='tool', type=str, nargs=1, choices=['clean', 'molecule', 'molecule-partial', 'lammps-partial'], help='Name of tool to be used. Possible tools: clean, molecule, molecule-partial, lammps-partial')
 parser.add_argument('data_files', metavar='data_files', nargs='+', help='Name of file to be acted on. If tool is "clean" this can be a list of files')
 parser.add_argument('--coeff_file', metavar='coeff_file', nargs=1, help='Argument for the "clean" tool: a coefficients file to be cleaned')
 parser.add_argument('--save_name', metavar='save_name', nargs=1, help='Argument for "molecule", "molecule-partial" and "lammps-partial" tools: sets the file name for the new file')
-parser.add_argument('--ba', metavar='bonding_atoms', nargs=2, help='Argument for "molecule-partial" and "lammps-partial" tools: atom IDs of the atoms that will be involved in creating a new bond')
+parser.add_argument('--ba', metavar='bonding_atoms', nargs=2, help='Argument for "molecule", "molecule-partial" and "lammps-partial" tools: atom IDs of the atoms that will be involved in creating a new bond')
 parser.add_argument('--ebt', metavar='elements_by_type', nargs='+', help='Argument for "molecule-partial" and "lammps-partial" tools: list of elements symbols in the same order as the types specified in the data file')
 
 # Get arguments from parser
@@ -46,8 +46,8 @@ directory = args.directory[0]
 if tool == 'clean' and (args.coeff_file is None):
     parser.error('"clean" tool requries --coeff_file')
 
-if tool == 'molecule' and (args.save_name is None):
-    parser.error('"molecule" tool requries --save_name')
+if tool == 'molecule' and (args.save_name is None or args.ba is None):
+    parser.error('"molecule" tool requries --save_name and --ba (bonding atoms) arguments')
 
 if 'partial' in tool and (args.save_name is None or args.ba is None or args.ebt is None):
     parser.error('"molecule-partial" or "lammps-partial" tools require --save_name, --ba (bonding atoms) and --ebt (elements by type) arguments')
@@ -63,7 +63,7 @@ if tool == "clean":
 
 # Produce molecule data file
 elif tool == "molecule":
-    lammps_to_molecule(directory, args.data_files[0], args.save_name[0])
+    lammps_to_molecule(directory, args.data_files[0], args.save_name[0], args.ba)
 
 # Produce partial molecule data file
 elif tool == "molecule-partial":

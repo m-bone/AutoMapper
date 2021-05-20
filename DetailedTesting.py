@@ -1,9 +1,8 @@
-from AtomMapping import atom_mapping
 from PathSearch import map_from_path
 
 class Reaction:
-    def __init__(self, directory, preFileName, postFileName, elementByType, preBondingAtoms, postBondingAtoms):
-        self.mappedIDList = map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementByType)
+    def __init__(self, directory, preFileName, postFileName, elementByType):
+        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType)
 
     def test_report(self, correctPostAtomIDs, reactionName):
         print(f'Reaction: {reactionName}')
@@ -60,9 +59,7 @@ ethylEthanoate = Reaction(
     '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 
     'pre-molecule.data', 
     'post-molecule.data', 
-    ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], 
-    ['6', '11'], 
-    ['7', '2']
+    ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O']
 )
 correctEthylEthanoate = {
     '11': ['2'],
@@ -91,7 +88,12 @@ ethylEthanoate.test_report(correctEthylEthanoate, 'Ethyl Ethanoate')
 
 
 # Methane to Ethane 
-ethane = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Methane_Ethane/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'C'], ['1', '6'], ['1', '2'])
+ethane = Reaction(
+    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Methane_Ethane/Reaction', 
+    'pre-molecule.data', 
+    'post-molecule.data', 
+    ['H', 'C']
+)
 correctEthane = {
     '1': ['1'],
     '2': ['6', '7', '8'],
@@ -107,7 +109,12 @@ correctEthane = {
 ethane.test_report(correctEthane, 'Methane to Ethane')
 
 # LAMMPS Example - Nylon 6,6
-nylon = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Nylon6-6', 'rxn1_stp1_unreacted.data_template', 'rxn1_stp1_reacted.data_template', ['C', 'N', 'H', 'H', 'C', 'O', 'H', 'O', 'N', 'H', 'O'], ['10', '1'], ['10', '1'])
+nylon = Reaction(
+    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Nylon6-6', 
+    'rxn1_stp1_unreacted.data_template', 
+    'rxn1_stp1_reacted.data_template', 
+    ['C', 'N', 'H', 'H', 'C', 'O', 'H', 'O', 'N', 'H', 'O']
+)
 correctNylon = {
     '1': ['1'],
     '2': ['2'],
@@ -131,7 +138,12 @@ correctNylon = {
 nylon.test_report(correctNylon, 'Nylon Melt Lammps Example')
 
 # Phenol O-Alkylation
-phenAlkyl = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Phenol_Alkylation/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O'], ['13', '14'], ['13', '14'])
+phenAlkyl = Reaction(
+    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Phenol_Alkylation/Reaction', 
+    'pre-molecule.data', 
+    'post-molecule.data', 
+    ['H', 'H', 'C', 'C', 'O', 'O']
+)
 correctPhenAlkyl = {
     '1': ['1'],
     '2': ['2'],
