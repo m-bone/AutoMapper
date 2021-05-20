@@ -1,6 +1,6 @@
 # Bonding_Atoms  11 7
 # Edge_Atoms  17 2 10 1 9
-# Edge_Atom_Fingerprints  38 C 3 CH 23 CHH 1 CN 17 HHH
+# Edge_Atom_Fingerprints  17 C 2 CH 10 CHH 1 CN 9 HHH
 
 20 atoms
 19 bonds

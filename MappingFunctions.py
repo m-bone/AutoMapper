@@ -33,9 +33,9 @@ def element_atomID_dict(directory, fileName, elementsByType):
     data = clean_data(lines)
     sections = find_sections(data)
     try: # Try is for getting types from molecule file types
-        types = get_data('Types', data, sections)
+        types = get_data('Types', data, sections, useExcept=False)
     except ValueError: # Exception gets types from standard lammps file type
-        atoms = get_data('Atoms', data, sections)
+        atoms = get_data('Atoms', data, sections, useExcept=False)
         types = [[atomRow[0], atomRow[2]] for atomRow in atoms]
     typesDict = {row[0]: row[1] for row in types} # Keys: ID, Val: Type
 

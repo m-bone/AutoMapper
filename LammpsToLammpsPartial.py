@@ -44,7 +44,7 @@ from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file
 from LammpsSearchFuncs import get_data, find_partial_structure, find_sections
 from MappingFunctions import element_atomID_dict
 
-def lammps_to_lammps_partial(directory, fileName, saveName, bondingAtoms):
+def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bondingAtoms):
     # Check that bonding atoms have been specified
     assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
 
@@ -108,14 +108,14 @@ def lammps_to_lammps_partial(directory, fileName, saveName, bondingAtoms):
     header.insert(0, '\n')
 
     # Format edge atom fingerprints
-    elementAtomIDDict = element_atomID_dict(directory, fileName, ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'])
+    elementAtomIDDict = element_atomID_dict(directory, fileName, elementsByType)
     
     edgeElementFingerprintDict = edge_atom_fingerprint_strings(edgeAtomFingerprintDict, elementAtomIDDict)
 
     # Convert dictionary to list of lists, renumber edge atoms, and reduce to a list
     edgeElementFingerprintList = [[key, atomString] for key, atomString in edgeElementFingerprintDict.items()]
     renumberedEdgeFingerprints = [[renumberedAtomIDDict[fingerprint[0]], fingerprint[1]] for fingerprint in edgeElementFingerprintList]
-    renumberedEdgeFingerprints = [value for fingerprintList in edgeElementFingerprintList for value in fingerprintList]
+    renumberedEdgeFingerprints = [value for fingerprintList in renumberedEdgeFingerprints for value in fingerprintList]
 
     # Renumber bonding and edge atom comments with new atomIDs
     renumberedBondingAtoms = [renumberedAtomIDDict[ba] for ba in bondingAtoms]

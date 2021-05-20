@@ -6,7 +6,7 @@ class Reaction:
         self.mappedIDList = map_from_path(directory, preFileName, postFileName, preBondingAtoms, postBondingAtoms, elementByType)
 
     def test_report(self, correctPostAtomIDs, reactionName):
-        print(f'\n\nReaction: {reactionName}')
+        print(f'Reaction: {reactionName}')
         # Print test report
         for mappedPair in self.mappedIDList:
             print(f'Atom {mappedPair[0]} is mapped to atom {mappedPair[1]}')
@@ -28,32 +28,32 @@ class Reaction:
         print(f'Incorrectly assigned premolecule atomIDs: {incorrectPreAtomsList}, Count {len(incorrectPreAtomsList)}')
         print(f'Repeated Atoms: {repeatedPostIDs}, Count: {len(repeatedPostIDs)}\n\n')
 
-# DGEBA-DETDA
-dgebaDetda = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'],
-['28', '62'], ['32', '15'])
-correctDgebaDetda = {
-    '28': ['32'],
-    '62': ['15'],
-    '35': ['36', '5'],
-    '36': ['36', '5'],
-    '25': ['35'],
-    '37': ['37'],
-    '34': ['16'],
-    '24': ['39'],
-    '26': ['41', '42'],
-    '27': ['41', '42'],
-    '22': ['38'],
-    '63': ['33', '34'],
-    '64': ['33', '34'],
-    '51': ['4'],
-    '50': ['6', '9'],
-    '55': ['6', '9'],
-    '56': ['17'],
-    '60': ['23'],
-    '52': ['1'],
-    '54': ['3']
-}
-dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
+# DGEBA-DETDA - needs remaking for new ids
+# dgebaDetda = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'],
+# ['28', '62'], ['32', '15'])
+# correctDgebaDetda = {
+#     '28': ['32'],
+#     '62': ['15'],
+#     '35': ['36', '5'],
+#     '36': ['36', '5'],
+#     '25': ['35'],
+#     '37': ['37'],
+#     '34': ['16'],
+#     '24': ['39'],
+#     '26': ['41', '42'],
+#     '27': ['41', '42'],
+#     '22': ['38'],
+#     '63': ['33', '34'],
+#     '64': ['33', '34'],
+#     '51': ['4'],
+#     '50': ['6', '9'],
+#     '55': ['6', '9'],
+#     '56': ['17'],
+#     '60': ['23'],
+#     '52': ['1'],
+#     '54': ['3']
+# }
+# dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
 
 # Ethyl Ethanoate
 ethylEthanoate = Reaction(
@@ -129,6 +129,36 @@ correctNylon = {
     '18': ['17', '18'],
 }
 nylon.test_report(correctNylon, 'Nylon Melt Lammps Example')
+
+# Phenol O-Alkylation
+phenAlkyl = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/Phenol_Alkylation/Reaction', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O'], ['13', '14'], ['13', '14'])
+correctPhenAlkyl = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3'],
+    '4': ['4'],
+    '5': ['5'],
+    '6': ['6'],
+    '7': ['7'],
+    '8': ['8'],
+    '9': ['9'],
+    '10': ['10'],
+    '11': ['11'],
+    '12': ['23', '24'],
+    '13': ['13'],
+    '14': ['14'],
+    '15': ['17'],
+    '16': ['12', '15', '16'],
+    '17': ['12', '15', '16'],
+    '18': ['12', '15', '16'],
+    '19': ['23', '24'],
+    '20': ['18', '19'],
+    '21': ['18', '19'],
+    '22': ['20'],
+    '23': ['21', '22'],
+    '24': ['21', '22']
+}
+phenAlkyl.test_report(correctPhenAlkyl, 'Phenol O-Alkylation')
 
 # Validation idea
 # Search for ambiguous groups in the post molecule by comparing post atom to all post atoms

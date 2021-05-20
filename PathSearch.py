@@ -132,6 +132,8 @@ def build_atom_objects(directory, fileName, bondingAtoms, elementDict):
     atomIDs = [row[0] for row in coords]
     bonds = get_data('Bonds', data, sections)
 
+    # Get top comment info for bonding and edge atoms
+    #START HERE
     # Build neighbours dict
     neighboursDict = get_neighbours(atomIDs, bonds)
 

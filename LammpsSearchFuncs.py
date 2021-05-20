@@ -18,9 +18,17 @@
 import re
 
 # Get data
-def get_data(sectionName, lines, sectionIndexList):
-    # Checks that section name is existing in LAMMPS data
-    startIndex = lines.index(sectionName)
+def get_data(sectionName, lines, sectionIndexList, useExcept = True):
+    if useExcept: # Checks that section name is existing in LAMMPS data
+        try:
+            startIndex = lines.index(sectionName)
+        except ValueError:
+            # If doesn't exist, return empty list that can be added as normal to main list later
+            data = []
+            return data
+
+    else: # Allows for later try/except blocks to catch missing section names
+        startIndex = lines.index(sectionName)
 
     endIndex = sectionIndexList[sectionIndexList.index(startIndex) + 1]
     
