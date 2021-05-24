@@ -3,7 +3,7 @@ from LammpsTreatmentFuncs import clean_data
 from LammpsSearchFuncs import get_data, find_sections
 
 def test_lammps_to_molecule():
-    lammps_to_molecule('/home/matt/Documents/Bond_React_Python/Test_Cases', 'cleanedpre-system.data', 'pre')
+    lammps_to_molecule('/home/matt/Documents/Bond_React_Python/Test_Cases', 'cleanedpre-system.data', 'pre', ['1', '6'])
     with open ('premolecule.data', 'r') as f:
         mol = f.readlines()
     

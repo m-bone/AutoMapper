@@ -2,7 +2,7 @@ import os
 import math
 import numpy as np
 from natsort import natsorted
-from collections import deque
+from collections import Counter, deque
 from functools import reduce
 
 from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, pair_search, get_neighbours
@@ -25,10 +25,11 @@ class Queue:
         return self.elements.popleft()
 
 class Atom():
-    def __init__(self, atomID, element, bondingAtom, NeighbourIDs):
+    def __init__(self, atomID, element, bondingAtom, edgeAtom, NeighbourIDs):
         self.atomID = atomID
         self.element = element
         self.bondingAtom = bondingAtom
+        self.edgeAtom = edgeAtom
         self.NeighbourIDs = NeighbourIDs
         self.NeighbourElements = []
 
@@ -77,7 +78,7 @@ class Atom():
         queueAtoms = []
 
         # Match Function
-        def match(preAtom, postAtom, preAtomIndex, postAtomIndex, mapList, queueList):
+        def matchNeighbour(preAtom, postAtom, preAtomIndex, postAtomIndex, mapList, queueList):
             mapList.append([preAtom.NeighbourIDs[preAtomIndex], postAtom.NeighbourIDs[postAtomIndex]])
             
             if self.NeighbourElements[preAtomIndex] != 'H':
@@ -97,14 +98,14 @@ class Atom():
             # Assign atomIDs if there is only one matching element - could this go wrong if an element moves and an identical element takes its place?
             elif elementOccurence == 1:
                 postIndex = atomObject.NeighbourElements.index(neighbour)
-                match(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
+                matchNeighbour(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
 
             # More than one matching element requires additional considerations
             elif elementOccurence > 1:
                 if neighbour == 'H': # H can be handled simply as all H are equivalent to each other in this case - ignores chirality
                     postHydrogenIndexList = [index for index, element in enumerate(atomObject.NeighbourElements) if element == 'H']
                     postIndex = postHydrogenIndexList.pop()
-                    match(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
+                    matchNeighbour(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
                     
                 else:
                     # To come
@@ -135,23 +136,40 @@ def build_atom_objects(directory, fileName, elementDict):
     # Get top comment info for bonding and edge atoms
     topComments = get_top_comments(lines)
     bondingAtoms = read_top_comments(topComments, 'Bonding_Atoms')
-    # edgeAtoms = read_top_comments(topComments, 'Edge_Atoms')
-    # edgeAtomFingerprints = read_top_comments(topComments, 'Edge_Atom_Fingerprints')
+    edgeAtoms = read_top_comments(topComments, 'Edge_Atoms')
+    edgeAtomFingerprints = read_top_comments(topComments, 'Edge_Atom_Fingerprints')
+    
+    # Check for if edge atoms are present
+    if edgeAtoms is not None:
+        edgeAtomDict = {edgeAtom: edgeAtomFingerprints[index] for index, edgeAtom in enumerate(edgeAtoms)}
+    else:
+        edgeAtomDict = None
+        edgeAtoms = [] # Empty list passes later 'in' check
 
     # Build neighbours dict
     neighboursDict = get_neighbours(atomIDs, bonds)
 
-    atomList = []
+    atomObjectList = []
     for atomID in atomIDs:
         neighbours = neighboursDict[atomID]
+
+        # Check if atom is a bonding atom, return boolean
         if atomID in bondingAtoms:
             bondingAtom = True
         else:
             bondingAtom = False
-        atom = Atom(atomID, elementDict[atomID], bondingAtom, neighbours)
-        atomList.append(atom)
+
+        # Check if atom is an edge atom, return fingerprint string or None
+        if atomID in edgeAtoms:
+            edgeAtomIndex = edgeAtoms.index(atomID)
+            edgeAtom = edgeAtomFingerprints[edgeAtomIndex]
+        else:
+            edgeAtom = None
+
+        atom = Atom(atomID, elementDict[atomID], bondingAtom, edgeAtom, neighbours)
+        atomObjectList.append(atom)
     
-    return atomList, bondingAtoms
+    return atomObjectList, bondingAtoms, edgeAtomDict
 
 # Returns atom class object that has specific atom ID
 def get_atom_object(atomID, atomList):
@@ -177,6 +195,38 @@ def add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList):
         queueAtomObjects.append([preAtom, postAtom])
     queue.add(queueAtomObjects)
 
+def queue_bond_atoms(preAtomObjectList, preBondingAtoms, postAtomObjectList, postBondingAtoms, mappedIDList, queue):
+    # Loop through bonding atoms, getting atom objects and adding them to queue and mapped list
+    for index, preBondAtom in enumerate(preBondingAtoms):
+        preAtomObject = get_atom_object(preBondAtom, preAtomObjectList)
+        postAtomObject = get_atom_object(postBondingAtoms[index], postAtomObjectList)
+        queue.add([[preAtomObject, postAtomObject]])
+        mappedIDList.append([preBondAtom, postBondingAtoms[index]])
+
+
+def queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue):
+    # Skip function call if no edge atoms present
+    if preEdgeAtomDict is None:
+        return
+
+    # Check edge atom fingerprints are the same
+    assert natsorted(list(preEdgeAtomDict.values())) == natsorted(list(postEdgeAtomDict.values())), 'Pre and post edge atom fingerprints do not match.'
+    
+    # Find unique fingerprints 
+    countEdgeAtomFingerprints = Counter(list(preEdgeAtomDict.values()))
+    uniqueEdgeAtomFingerprints = [fingerprint for fingerprint in preEdgeAtomDict.values() if countEdgeAtomFingerprints[fingerprint] == 1]
+    for fingerprint in uniqueEdgeAtomFingerprints:
+        # Find index of fingerprint values, then get key at that index
+        preEdgeAtomID = list(preEdgeAtomDict.keys())[list(preEdgeAtomDict.values()).index(fingerprint)]
+        postEdgeAtomID = list(postEdgeAtomDict.keys())[list(postEdgeAtomDict.values()).index(fingerprint)]
+        
+        preAtomObject = get_atom_object(preEdgeAtomID, preAtomObjectList)
+        postAtomObject = get_atom_object(postEdgeAtomID, postAtomObjectList)
+        
+        queue.add([[preAtomObject, postAtomObject]])
+        mappedIDList.append([preEdgeAtomID, postEdgeAtomID])
+
+
 def map_from_path(directory, preFileName, postFileName, elementsByType):
     # Build atomID to element dict
     preElementDict = element_atomID_dict(directory, preFileName, elementsByType)
@@ -184,77 +234,73 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
     elementDictList = [preElementDict, postElementDict]
 
     # Generate atom class objects list
-    preAtomObjectList, preBondingAtoms = build_atom_objects(directory, preFileName, preElementDict)
-    postAtomObjectList, postBondingAtoms = build_atom_objects(directory, postFileName, postElementDict)
+    preAtomObjectList, preBondingAtoms, preEdgeAtomDict = build_atom_objects(directory, preFileName, preElementDict)
+    postAtomObjectList, postBondingAtoms, postEdgeAtomDict = build_atom_objects(directory, postFileName, postElementDict)
 
     # Initialise lists
     mappedIDList = []
     missingPreAtomsList = []
     missingPostAtomsList = []
 
-    # Add bonding atoms to mapped ID list
-    for index, atom in enumerate(preBondingAtoms):
-        mappedIDList.append([atom, postBondingAtoms[index]])
+    # Initialise queue
+    queue = Queue()
 
-    # Mapping loop
-    for bondingIndex, preBondAtom in enumerate(preBondingAtoms):
-        preStartAtom = get_atom_object(preBondAtom, preAtomObjectList)
-        postStartAtom = get_atom_object(postBondingAtoms[bondingIndex], postAtomObjectList)
+    # Populate queue with bonding atoms and update mappedIDList
+    queue_bond_atoms(preAtomObjectList, preBondingAtoms, postAtomObjectList, postBondingAtoms, mappedIDList, queue)
+
+    # Populate queue with unique edge atoms if present
+    queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue)
+
+    # Search through queue creating new maps based on all elements in a given path
+    while not queue.empty():
+        currentAtoms = queue.get()
+        for mainIndex, atom in enumerate(currentAtoms):
+            atom.check_mapped(mappedIDList, mainIndex)
+            atom.get_elements(elementDictList[mainIndex])
         
-        # Start queue and add pre and post starting atoms
-        queue = Queue()
-        queue.add([[preStartAtom, postStartAtom]])
+        newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1])
 
-        # Search through queue creating new maps based on all elements in a given path
-        while not queue.empty():
-            currentAtoms = queue.get()
-            for mainIndex, atom in enumerate(currentAtoms):
-                atom.check_mapped(mappedIDList, mainIndex)
-                atom.get_elements(elementDictList[mainIndex])
-            
-            newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1])
+        # Convert queue atoms to atom class objects and add to queue
+        add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
 
-            # Convert queue atoms to atom class objects and to queue
-            add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
+        # Extend missing lists
+        missingPreAtomsList.extend(missingPreAtoms)
+        missingPostAtomsList.extend(missingPostAtoms)
 
-            # Extend missing lists
-            missingPreAtomsList.extend(missingPreAtoms)
-            missingPostAtomsList.extend(missingPostAtoms)
-
-            # Add new pairs to mapped ID list
-            mappedIDList.extend(newMap)
+        # Add new pairs to mapped ID list
+        mappedIDList.extend(newMap)
 
     # Handle missing atoms
     # Update lists to remove any atoms that have been assigned and convert IDs into atom objects
-    # missingPreAtomsObjects = []
-    # missingPostAtomsObjects = []
-    # mappedPreAtoms = [pair[0] for pair in mappedIDList]
-    # mappedPostAtoms = [pair[1] for pair in mappedIDList]
+    missingPreAtomsObjects = []
+    missingPostAtomsObjects = []
+    mappedPreAtoms = [pair[0] for pair in mappedIDList]
+    mappedPostAtoms = [pair[1] for pair in mappedIDList]
 
-    # for atom in missingPreAtomsList:
-    #     if atom not in mappedPreAtoms:
-    #         atomsObject = get_atom_object(atom, preAtomObjectList)
-    #         missingPreAtomsObjects.append(atomsObject)
+    for atom in missingPreAtomsList:
+        if atom not in mappedPreAtoms:
+            atomsObject = get_atom_object(atom, preAtomObjectList)
+            missingPreAtomsObjects.append(atomsObject)
 
-    # for atom in missingPostAtomsList:
-    #     if atom not in mappedPostAtoms:
-    #         atomsObject = get_atom_object(atom, postAtomObjectList)
-    #         missingPostAtomsObjects.append(atomsObject)
+    for atom in missingPostAtomsList:
+        if atom not in mappedPostAtoms:
+            atomsObject = get_atom_object(atom, postAtomObjectList)
+            missingPostAtomsObjects.append(atomsObject)
 
 
-    # missingPostAtomElements = [atom.element for atom in missingPostAtomsObjects]
-    # for index, preAtom in enumerate(missingPreAtomsObjects):
-    #     elementOccurence = missingPostAtomElements.count(preAtom.element)
+    missingPostAtomElements = [atom.element for atom in missingPostAtomsObjects]
+    for index, preAtom in enumerate(missingPreAtomsObjects):
+        elementOccurence = missingPostAtomElements.count(preAtom.element)
 
-    #     if elementOccurence == 0:
-    #         print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
+        if elementOccurence == 0:
+            print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
 
-    #     elif elementOccurence == 1:
-    #         postIndex = missingPostAtomElements.index(preAtom.element)
-    #         mappedIDList.append([preAtom.atomID, missingPostAtomsObjects[postIndex].atomID])
+        elif elementOccurence == 1:
+            postIndex = missingPostAtomElements.index(preAtom.element)
+            mappedIDList.append([preAtom.atomID, missingPostAtomsObjects[postIndex].atomID])
 
-    #     elif elementOccurence > 1:
-    #         print(f"Too many element matches in post missing atom for {preAtom.atomID}")
+        elif elementOccurence > 1:
+            print(f"Too many element matches in post missing atom for {preAtom.atomID}")
 
     return mappedIDList
     

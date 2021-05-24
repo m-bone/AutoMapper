@@ -3,7 +3,7 @@ from LammpsTreatmentFuncs import clean_data
 from LammpsSearchFuncs import get_data, find_sections
 
 def test_unified_cleaner():
-    file_unifier('/home/matt/Documents/Bond_React_Python/Test_Cases', 'system.in.settings', ['pre-system.data', 'post-system.data'])
+    file_unifier('/home/matt/Documents/Bond_React_Python/Test_Cases/Cleaner/Methane_Ethane/', 'system.in.settings', ['pre-system.data', 'post-system.data'])
 
     # Load cleaned pre-system
     with open('cleanedpre-system.data', 'r') as f:

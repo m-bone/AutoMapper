@@ -64,7 +64,7 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     # Get original bonds data
     originalBonds = get_data('Bonds', tidiedLines, sectionIndexList)
     
-    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds)
+    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, bondDistance=3)
 
     # Get atoms data
     atoms = get_data('Atoms', tidiedLines, sectionIndexList)
@@ -115,10 +115,8 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     
     edgeElementFingerprintDict = edge_atom_fingerprint_strings(edgeAtomFingerprintDict, elementAtomIDDict)
 
-    # Convert dictionary to list of lists, renumber edge atoms, and reduce to a list
-    edgeElementFingerprintList = [[key, atomString] for key, atomString in edgeElementFingerprintDict.items()]
-    renumberedEdgeFingerprints = [[renumberedAtomIDDict[fingerprint[0]], fingerprint[1]] for fingerprint in edgeElementFingerprintList]
-    renumberedEdgeFingerprints = [value for fingerprintList in renumberedEdgeFingerprints for value in fingerprintList]
+    # Convert dictionary to list of lists of fingerprint strings - order is the same as renumbered edge atoms
+    edgeElementFingerprintList = [atomString for atomString in edgeElementFingerprintDict.values()]
 
     # Renumber bonding and edge atom comments with new atomIDs
     renumberedBondingAtoms = [renumberedAtomIDDict[ba] for ba in bondingAtoms]
@@ -127,7 +125,7 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     # Add bond and edge atoms as comment in header
     bondAtoms = format_comment(renumberedBondingAtoms, '# Bonding_Atoms ')
     edgeAtoms = format_comment(renumberedEdgeAtoms, '# Edge_Atoms ')
-    edgeFingerprints = format_comment(renumberedEdgeFingerprints, '# Edge_Atom_Fingerprints ')
+    edgeFingerprints = format_comment(edgeElementFingerprintList, '# Edge_Atom_Fingerprints ')
     commentString = [bondAtoms, edgeAtoms, edgeFingerprints]
 
     # Combine to one long output list

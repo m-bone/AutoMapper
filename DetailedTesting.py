@@ -27,32 +27,36 @@ class Reaction:
         print(f'Incorrectly assigned premolecule atomIDs: {incorrectPreAtomsList}, Count {len(incorrectPreAtomsList)}')
         print(f'Repeated Atoms: {repeatedPostIDs}, Count: {len(repeatedPostIDs)}\n\n')
 
-# DGEBA-DETDA - needs remaking for new ids
-# dgebaDetda = Reaction('/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/Reaction', 'new_start_molecule.data', 'new_post_rx1_molecule.data', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'],
-# ['28', '62'], ['32', '15'])
-# correctDgebaDetda = {
-#     '28': ['32'],
-#     '62': ['15'],
-#     '35': ['36', '5'],
-#     '36': ['36', '5'],
-#     '25': ['35'],
-#     '37': ['37'],
-#     '34': ['16'],
-#     '24': ['39'],
-#     '26': ['41', '42'],
-#     '27': ['41', '42'],
-#     '22': ['38'],
-#     '63': ['33', '34'],
-#     '64': ['33', '34'],
-#     '51': ['4'],
-#     '50': ['6', '9'],
-#     '55': ['6', '9'],
-#     '56': ['17'],
-#     '60': ['23'],
-#     '52': ['1'],
-#     '54': ['3']
-# }
-# dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
+# DGEBA-DETDA
+dgebaDetda = Reaction(
+    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/FullModel/Reaction', 
+    'pre-molecule.data', 
+    'post-molecule.data', 
+    ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O']
+)
+correctDgebaDetda = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3'],
+    '4': ['4'],
+    '5': ['18'],
+    '6': ['5'],
+    '7': ['6'],
+    '8': ['7'],
+    '9': ['8'],
+    '10': ['9'],
+    '11': ['10'],
+    '12': ['11'],
+    '13': ['12', '15'],
+    '14': ['13'],
+    '15': ['14'],
+    '16': ['15', '12'],
+    '17': ['19', '20'],
+    '18': ['16'],
+    '19': ['20', '19'],
+    '20': ['17']
+}
+dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
 
 # Ethyl Ethanoate
 ethylEthanoate = Reaction(
