@@ -5,7 +5,7 @@ from natsort import natsorted
 from collections import Counter, deque
 from functools import reduce
 
-from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, pair_search, get_neighbours
+from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, pair_search, get_neighbours, get_additional_neighbours
 from LammpsTreatmentFuncs import clean_data
 from MappingFunctions import element_atomID_dict, calc_angles
 
@@ -25,18 +25,27 @@ class Queue:
         return self.elements.popleft()
 
 class Atom():
-    def __init__(self, atomID, element, bondingAtom, edgeAtom, NeighbourIDs):
+    def __init__(self, atomID, element, bondingAtom, edgeAtom, neighbourIDs, secondNeighbourIDs, thirdNeighbourIDs, neighbourElements, secondNeighbourElements, thirdNeighbourElements):
         self.atomID = atomID
         self.element = element
         self.bondingAtom = bondingAtom
         self.edgeAtom = edgeAtom
-        self.NeighbourIDs = NeighbourIDs
-        self.NeighbourElements = []
 
-    def check_mapped(self, mappedIDs, searchIndex):
-        """Update NeighbourIDs.
+        # Neighbours
+        self.mappedNeighbourIDs = neighbourIDs # This is changed according to mapping
+        self.firstNeighbourIDs = neighbourIDs.copy() # This is fixed throughout mapping process
+        self.secondNeighbourIDs = secondNeighbourIDs
+        self.thirdNeighbourIDs = thirdNeighbourIDs
 
-        Updates NeighbourIDs by removing IDs that have already been mapped.
+        self.mappedNeighbourElements = neighbourElements # This is changed according to mapping
+        self.firstNeighbourElements = neighbourElements.copy() # This is fixed throughout mapping process
+        self.secondNeighbourElements = secondNeighbourElements
+        self.thirdNeighbourElements = thirdNeighbourElements
+
+    def check_mapped(self, mappedIDs, searchIndex, elementDict):
+        """Update neighbourIDs.
+
+        Updates neighbourIDs by removing IDs that have already been mapped.
         This will be called before all neighbour mapping attempts to stop atoms
         being mapped multiple times.
 
@@ -50,23 +59,11 @@ class Atom():
         """
         searchIndexMappedIDs = [row[searchIndex] for row in mappedIDs]
         
-        self.NeighbourIDs = [ID for ID in self.NeighbourIDs if ID not in searchIndexMappedIDs]
+        self.mappedNeighbourIDs = [ID for ID in self.mappedNeighbourIDs if ID not in searchIndexMappedIDs]
+        self.mappedNeighbourElements = [elementDict[atomID]for atomID in self.mappedNeighbourIDs]
 
-    def get_elements(self, elementDict):
-        """Gets elements for neighbour IDs.
 
-        This is expected to be run after check_mapped, so that elements are only found
-        for true  IDs.
-
-        Args:
-            elementDict: Dictionary of atomID keys, and element string values
-
-        Returns:
-            Updates existing class variable self.NeighbourElements
-        """
-        self.NeighbourElements = [elementDict[atomID]for atomID in self.NeighbourIDs]
-
-    def map_elements(self, atomObject):
+    def map_elements(self, atomObject, preAtomObjectList, postAtomObjectList):
         """
         TO DO: How to handle multiple different atoms between base and target data?
             e.g. base and target are the same length but pre is H O H C and post is H C H C
@@ -79,42 +76,86 @@ class Atom():
 
         # Match Function
         def matchNeighbour(preAtom, postAtom, preAtomIndex, postAtomIndex, mapList, queueList):
-            mapList.append([preAtom.NeighbourIDs[preAtomIndex], postAtom.NeighbourIDs[postAtomIndex]])
+            mapList.append([preAtom.mappedNeighbourIDs[preAtomIndex], postAtom.mappedNeighbourIDs[postAtomIndex]])
             
-            if self.NeighbourElements[preAtomIndex] != 'H':
-                queueList.append([preAtom.NeighbourIDs[preAtomIndex], postAtom.NeighbourIDs[postAtomIndex]])
+            if preAtom.mappedNeighbourElements[preAtomIndex] != 'H':
+                queueList.append([preAtom.mappedNeighbourIDs[preAtomIndex], postAtom.mappedNeighbourIDs[postAtomIndex]])
 
-            postAtom.NeighbourIDs.pop(postAtomIndex)
-            postAtom.NeighbourElements.pop(postAtomIndex)
+            postAtom.mappedNeighbourIDs.pop(postAtomIndex)
+            postAtom.mappedNeighbourElements.pop(postAtomIndex)
+
+        def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom):
+            # Edge atom comparison
+
+            # Neighbour comparison - no inference for now
+            neighbourComparison = [atomObject.firstNeighbourElements for atomObject in postNeighbourAtomObjectList]
+            neighbourFingerprint = [''.join(elements) for elements in neighbourComparison]
+
+            # Remove duplicate fingerprints
+            countFingerprints = Counter(neighbourFingerprint)
+            tuppledFingerprints = [(index, fingerprint) for index, fingerprint in enumerate(neighbourFingerprint) if countFingerprints[fingerprint] == 1]
+
+            # Difficulty - have to come down to the fingerprint string and then back out to get the atom object
+            # Index can change due to duplicate check
+            for index, fingerprint in tuppledFingerprints:
+                if ''.join(preNeighbourAtom.firstNeighbourElements) == fingerprint: # The preAtom check is wrong, it needs to pick a prospective atom from the element list
+                    return postNeighbourAtomObjectList[index].atomID
+
+            # Third neighbour comparison
+
 
         # Loop through neighbours for atom in one state and compare to neighbours of atom in other state
-        for preIndex, neighbour in enumerate(self.NeighbourElements):
-            elementOccurence = atomObject.NeighbourElements.count(neighbour)
+        for preIndex, neighbour in enumerate(self.mappedNeighbourElements):
+            elementOccurence = atomObject.mappedNeighbourElements.count(neighbour)
+
+            # Check to see if preElementOccurence == postElementOccurence, means something has moved
+            # Add results to missing list and sort out later on
 
             # If no match in post atom list it is a missingPreAtom
             if elementOccurence == 0:
-                missingPreAtoms.append(self.NeighbourIDs[preIndex])
+                missingPreAtoms.append(self.mappedNeighbourIDs[preIndex])
             
             # Assign atomIDs if there is only one matching element - could this go wrong if an element moves and an identical element takes its place?
             elif elementOccurence == 1:
-                postIndex = atomObject.NeighbourElements.index(neighbour)
+                postIndex = atomObject.mappedNeighbourElements.index(neighbour)
                 matchNeighbour(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
 
             # More than one matching element requires additional considerations
             elif elementOccurence > 1:
                 if neighbour == 'H': # H can be handled simply as all H are equivalent to each other in this case - ignores chirality
-                    postHydrogenIndexList = [index for index, element in enumerate(atomObject.NeighbourElements) if element == 'H']
+                    postHydrogenIndexList = [index for index, element in enumerate(atomObject.mappedNeighbourElements) if element == 'H']
                     postIndex = postHydrogenIndexList.pop()
                     matchNeighbour(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
                     
                 else:
-                    # To come
                     # If looking at neighbours for the next atom, possible problem caused by popping and reducing ID and element lists
-                    print("Symmetry atoms will be handled later")
+                    # print("Symmetry atoms will be handled later")
+
+                    # Get neighbour post atoms objects
+                    postNeighbourIndices = [index for index, val in enumerate(atomObject.mappedNeighbourElements) if val == neighbour]
+                    postNeighbourAtomIDs = [atomObject.mappedNeighbourIDs[i] for i in postNeighbourIndices]
+                    postNeighbourAtomObjects = [postAtomObject for postAtomObject in postAtomObjectList if postAtomObject.atomID in postNeighbourAtomIDs]
+
+                    # Get possible pre atom object
+                    preNeighbourAtomObject = 0
+                    for preAtomObject in preAtomObjectList:
+                        if preAtomObject.atomID == self.mappedNeighbourIDs[preIndex]:
+                            preNeighbourAtomObject = preAtomObject
+
+                    # Find the post atom ID for the current pre atom
+                    postNeighbourAtomID = compare_symmetric_atoms(postNeighbourAtomObjects, preNeighbourAtomObject)
+                    if postNeighbourAtomID is not None:
+                        postIndex = atomObject.mappedNeighbourIDs.index(postNeighbourAtomID)
+                        matchNeighbour(self, atomObject, preIndex, postIndex, mapList, queueAtoms)
+                    else:
+                        # If no post atom found, add pre atom missing atom list
+                        print(f'Could not find the symmetric pair for preAtom {self.mappedNeighbourIDs[preIndex]}')
+                        missingPreAtoms.append(self.mappedNeighbourIDs[preIndex])                                             
+
 
         # Search mapList for missingPostAtoms
         mappedPostAtomList = [row[1] for row in mapList]
-        missingPostAtoms = [neighbour for neighbour in atomObject.NeighbourIDs if neighbour not in mappedPostAtomList]
+        missingPostAtoms = [neighbour for neighbour in atomObject.mappedNeighbourIDs if neighbour not in mappedPostAtomList]
 
         return mapList, missingPreAtoms, missingPostAtoms, queueAtoms
 
@@ -149,9 +190,18 @@ def build_atom_objects(directory, fileName, elementDict):
     # Build neighbours dict
     neighboursDict = get_neighbours(atomIDs, bonds)
 
+    def get_elements(neighbourIDs, elementDict):
+        return [elementDict[atomID]for atomID in neighbourIDs]
+
     atomObjectList = []
     for atomID in atomIDs:
         neighbours = neighboursDict[atomID]
+        secondNeighbours = get_additional_neighbours(neighboursDict, atomID, neighbours)
+        thirdNeighbours = get_additional_neighbours(neighboursDict, atomID, secondNeighbours)
+
+        neighbourElements = get_elements(neighbours, elementDict)
+        secondNeighbourElements = get_elements(secondNeighbours, elementDict)
+        thirdNeighbourElements = get_elements(thirdNeighbours, elementDict)
 
         # Check if atom is a bonding atom, return boolean
         if atomID in bondingAtoms:
@@ -166,7 +216,7 @@ def build_atom_objects(directory, fileName, elementDict):
         else:
             edgeAtom = None
 
-        atom = Atom(atomID, elementDict[atomID], bondingAtom, edgeAtom, neighbours)
+        atom = Atom(atomID, elementDict[atomID], bondingAtom, edgeAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
         atomObjectList.append(atom)
     
     return atomObjectList, bondingAtoms, edgeAtomDict
@@ -174,10 +224,10 @@ def build_atom_objects(directory, fileName, elementDict):
 # Returns atom class object that has specific atom ID
 def get_atom_object(atomID, atomList):
     '''
-    Returns the atom object for a specific atom ID. Potential uses include for turning queue
+    Returns the atom object for a specific atom ID. Potential uses include turning queue
     atom IDs into atom objects for next stage of queue processing.
     Args:
-        atomID: An integer atom ID
+        atomID: A string integer atom ID
         atomList: List of all possible atom objects, either pre- or post-bond
 
     Returns:
@@ -255,10 +305,9 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
     while not queue.empty():
         currentAtoms = queue.get()
         for mainIndex, atom in enumerate(currentAtoms):
-            atom.check_mapped(mappedIDList, mainIndex)
-            atom.get_elements(elementDictList[mainIndex])
+            atom.check_mapped(mappedIDList, mainIndex, elementDictList[mainIndex])
         
-        newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1])
+        newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1], preAtomObjectList, postAtomObjectList)
 
         # Convert queue atoms to atom class objects and add to queue
         add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
@@ -272,6 +321,9 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
 
     # Handle missing atoms
     # Update lists to remove any atoms that have been assigned and convert IDs into atom objects
+    # Missing atoms in post that end up in another molecule (e.g. water) don't ever make it into missing atoms post
+    # Maybe just check if a post atom ID is in mapped list or missing already? If not add to missing?
+
     missingPreAtomsObjects = []
     missingPostAtomsObjects = []
     mappedPreAtoms = [pair[0] for pair in mappedIDList]
@@ -282,11 +334,17 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
             atomsObject = get_atom_object(atom, preAtomObjectList)
             missingPreAtomsObjects.append(atomsObject)
 
+    # Add any post atoms that aren't in the map or already in the missing atoms
+    totalPostAtomList = [postAtom.atomID for postAtom in postAtomObjectList]
+    unfoundMissingPostAtoms = [atomID for atomID in totalPostAtomList if atomID not in mappedPostAtoms and atomID not in missingPostAtomsList]
+    missingPostAtomsList.extend(unfoundMissingPostAtoms)
+
     for atom in missingPostAtomsList:
         if atom not in mappedPostAtoms:
             atomsObject = get_atom_object(atom, postAtomObjectList)
             missingPostAtomsObjects.append(atomsObject)
 
+    # Assert pre and post missing are the same length? I think this should be true at this point
 
     missingPostAtomElements = [atom.element for atom in missingPostAtomsObjects]
     for index, preAtom in enumerate(missingPreAtomsObjects):
@@ -315,3 +373,13 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
 # No repeated IDs / No IDs unassigned
 # Ambiguous groups maintained pre and post aside from moved atoms
 # Check that atom assigned from missingatoms is bound to the atoms that it expects to be bound to
+
+# Symmetry Solver
+# Need to write a universal symmetry solver that plugs into map_elements when occurence is > 1 and into missing elements when occurence is > 1
+# Look at what each atom is bound to, pre and post and judge similarities and differences here. Keep to one atom away for now
+# See if one atom is an edge and the other isn't
+# Could possible compare the number of dihedrals or angles they are involved in to get an idea of if it is the same atom, however these can change
+# Maybe count dihedrals and angles that don't involve missing atoms? This would fix movement issues
+
+# Consider -SO2- carbonyls, the oxygens are perfectly symmetric and there is no reason not to assign them randomly
+# When checking what is bound, if both atoms are bound to nothing or only to Hydrogen(s) then they can be randomly assigned successfully

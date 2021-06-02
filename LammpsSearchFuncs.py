@@ -182,7 +182,7 @@ def get_neighbours(atomIDList, bondsList):
 
     return boundAtomsDict
 
-def get_additional_neighbours(neighboursDict, searchAtomID, unique=True, searchNeighbours=None):
+def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, unique=True):
     ''' Get atomIDs of the neighbours of a given atomID.     
 
         This is designed to get second and third neighbours of a given atomID. Further away
@@ -194,16 +194,10 @@ def get_additional_neighbours(neighboursDict, searchAtomID, unique=True, searchN
 
         Returns:
             List of neighbour atomIDs
-    
     '''
    
-    if searchNeighbours is not None:
-        currentNeighbours = searchNeighbours
-    else:
-        currentNeighbours = neighboursDict[searchAtomID]
-
     totalNeighbourSet = set()
-    for currentNeighbour in currentNeighbours:
+    for currentNeighbour in searchNeighbours:
         totalNeighbourSet.update(neighboursDict[currentNeighbour])
 
     if unique:
@@ -211,15 +205,16 @@ def get_additional_neighbours(neighboursDict, searchAtomID, unique=True, searchN
         if searchAtomID in totalNeighbourSet:
             totalNeighbourSet.remove(searchAtomID)
 
-        # Remove the neighbours of the original atom if seachNeighbours are specified
-        if searchNeighbours is not None:
+        # Remove the neighbours from this search
+        for currentNeighbour in searchNeighbours:
+            if currentNeighbour in totalNeighbourSet:
+                totalNeighbourSet.remove(currentNeighbour)
+        
+        # Remove initial neighbours from set if they aren't the searchNeighbours specified
+        # This is for >= third neighbours
+        if neighboursDict[searchAtomID] != searchNeighbours:
             for neighbour in neighboursDict[searchAtomID]:
                 if neighbour in totalNeighbourSet:
                     totalNeighbourSet.remove(neighbour)
-
-        # Remove the neighbours from this search
-        for currentNeighbour in currentNeighbours:
-            if currentNeighbour in totalNeighbourSet:
-                totalNeighbourSet.remove(currentNeighbour)
 
     return list(totalNeighbourSet)
