@@ -164,6 +164,7 @@ def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
     return validAtomSet, edgeAtomList, filteredFingerprintDict
 
 def get_neighbours(atomIDList, bondsList):
+    '''Get atomIDs of neighbouring atoms for each atom in atomIDList'''
     boundAtomsList = []
 
     # Determine what atoms are bound to an initial atom
@@ -180,3 +181,45 @@ def get_neighbours(atomIDList, bondsList):
     boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
 
     return boundAtomsDict
+
+def get_additional_neighbours(neighboursDict, searchAtomID, unique=True, searchNeighbours=None):
+    ''' Get atomIDs of the neighbours of a given atomID.     
+
+        This is designed to get second and third neighbours of a given atomID. Further away
+        neighbours are possible but may have unintended results.
+
+        Args:
+            unique: Prevent search from returning atomIDs that were already in the neighboursDict,
+                in the searchNeighbours if specified, and the atomID. 
+
+        Returns:
+            List of neighbour atomIDs
+    
+    '''
+   
+    if searchNeighbours is not None:
+        currentNeighbours = searchNeighbours
+    else:
+        currentNeighbours = neighboursDict[searchAtomID]
+
+    totalNeighbourSet = set()
+    for currentNeighbour in currentNeighbours:
+        totalNeighbourSet.update(neighboursDict[currentNeighbour])
+
+    if unique:
+        # Remove the original search atomID from totalNeighbourSet if present
+        if searchAtomID in totalNeighbourSet:
+            totalNeighbourSet.remove(searchAtomID)
+
+        # Remove the neighbours of the original atom if seachNeighbours are specified
+        if searchNeighbours is not None:
+            for neighbour in neighboursDict[searchAtomID]:
+                if neighbour in totalNeighbourSet:
+                    totalNeighbourSet.remove(neighbour)
+
+        # Remove the neighbours from this search
+        for currentNeighbour in currentNeighbours:
+            if currentNeighbour in totalNeighbourSet:
+                totalNeighbourSet.remove(currentNeighbour)
+
+    return list(totalNeighbourSet)
