@@ -13,7 +13,7 @@
 #
 # File Description:
 # A range of functions designed to search LAMMPS files for information.
-# These functions work for a 'read_data' files and 'molecule' files
+# These functions work for 'read_data' files and 'molecule' files
 ##############################################################################
 import re
 

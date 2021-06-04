@@ -298,7 +298,7 @@ def queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, pos
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preEdgeAtomID, postEdgeAtomID])
 
-def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomsList, missingPostAtomsList, elementDictList):
+def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList):
     while not queue.empty():
         currentAtoms = queue.get()
         for mainIndex, atom in enumerate(currentAtoms):
@@ -310,23 +310,70 @@ def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missin
         add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
 
         # Extend missing lists
-        missingPreAtomsList.extend(missingPreAtoms)
-        missingPostAtomsList.extend(missingPostAtoms)
+        missingPreAtomList.extend(missingPreAtoms)
+        missingPostAtomList.extend(missingPostAtoms)
 
         # Add new pairs to mapped ID list
         mappedIDList.extend(newMap)
 
-def matchMissing(preAtom, postAtomMissingIndex, missingPostAtomsObjects, mapList, queue):
+def get_missing_atom_objects(missingAtomList, atomObjectList):
+    missingAtomObjects = []
+    for atom in missingAtomList:
+        atomObject = get_atom_object(atom, atomObjectList)
+        missingAtomObjects.append(atomObject)
+
+    return missingAtomObjects
+
+def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, missingPreAtomList, mappedIDList, queue, preAtomObjectList):
+    missingCheckCounter = 1
+    while missingCheckCounter < 4 and len(missingPostAtomObjects) > 0:
+        mappedPreAtomIndex = []
+        for preIndex, preAtom in enumerate(missingPreAtomObjects):
+            missingPostAtomElements = [atom.element for atom in missingPostAtomObjects]
+            elementOccurence = missingPostAtomElements.count(preAtom.element)
+
+            if elementOccurence == 0:
+                print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
+
+            elif elementOccurence == 1:
+                postIndex = missingPostAtomElements.index(preAtom.element)
+                matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                
+            elif elementOccurence > 1:
+                if preAtom.element == 'H':
+                    postHydrogenIndexList = [index for index, element in enumerate(missingPostAtomElements) if element == 'H']
+                    postIndex = postHydrogenIndexList.pop()
+                    matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                else:
+                    potentialPostAtomObjects = [atomObject for atomObject in missingPostAtomObjects if atomObject.element == preAtom.element]
+                    postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index')
+                    if postIndex is not None:
+                        matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)                                          
+
+        # Refresh missingPreAtomObjects so that it doesn't print needless error messages on subsequent loops
+        for index in sorted(mappedPreAtomIndex, reverse=True):
+            del missingPreAtomObjects[index]        
+        
+        missingCheckCounter += 1
+
+def matchMissing(preAtom, postAtomMissingIndex, missingPostAtomObjects, mapList, queue, preIndex, mappedPreAtomIndex):
     # Get post atom
-    postAtom = missingPostAtomsObjects[postAtomMissingIndex]
+    postAtom = missingPostAtomObjects[postAtomMissingIndex]
 
     mapList.append([preAtom.atomID, postAtom.atomID])
     
     if preAtom.element != 'H':
         queue.add([[preAtom, postAtom]]) # This circumvents add_to_queue()
 
-    missingPostAtomsObjects.pop(postAtomMissingIndex)
+    missingPostAtomObjects.pop(postAtomMissingIndex)
+    mappedPreAtomIndex.append(preIndex)
 
+def update_missing_list(missingAtomList, mappedIDList, mapIndex):
+    mappedAtoms = [pair[mapIndex] for pair in mappedIDList]
+    # Update missingAtomList to remove atoms that have been matched
+    newMissingAtomList = [atom for atom in missingAtomList if atom not in mappedAtoms]
+
+    return newMissingAtomList
 
 def map_from_path(directory, preFileName, postFileName, elementsByType):
     # Build atomID to element dict
@@ -340,8 +387,8 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
 
     # Initialise lists
     mappedIDList = []
-    missingPreAtomsList = []
-    missingPostAtomsList = []
+    missingPreAtomList = []
+    missingPostAtomList = []
 
     # Initialise queue
     queue = Queue()
@@ -353,71 +400,44 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
     queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue)
 
     # Search through queue creating new maps based on all elements in a given path
-    run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomsList, missingPostAtomsList, elementDictList)
+    run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
 
-    # Handle missing atoms
-    missingPreAtomsObjects = []
-    missingPostAtomsObjects = []
-    mappedPreAtoms = [pair[0] for pair in mappedIDList]
-    mappedPostAtoms = [pair[1] for pair in mappedIDList]
+    # Update missingPreAtoms to check if the missing atom search loop is needed
+    missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
 
-    # Get pre atom objects
-    for atom in missingPreAtomsList:
-        if atom not in mappedPreAtoms:
-            atomObject = get_atom_object(atom, preAtomObjectList)
-            missingPreAtomsObjects.append(atomObject)
+    # If missing pre atoms are present, map missing atoms and rerun the queue until success or timeout
+    timeoutCounter = 1
+    while len(missingPreAtomList) > 0 and timeoutCounter < 6:
+        # Update missing atom lists
+        missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
+        missingPostAtomList = update_missing_list(missingPostAtomList, mappedIDList, 1)
 
-    # Add any post atoms that aren't in the map or already in the missing atoms
-    totalPostAtomList = [postAtom.atomID for postAtom in postAtomObjectList]
-    unfoundMissingPostAtoms = [atomID for atomID in totalPostAtomList if atomID not in mappedPostAtoms and atomID not in missingPostAtomsList]
-    missingPostAtomsList.extend(unfoundMissingPostAtoms)
+        # Get pre atom objects
+        missingPreAtomObjects = get_missing_atom_objects(missingPreAtomList, preAtomObjectList)
 
-    # Get post atom objects
-    for atom in missingPostAtomsList:
-        if atom not in mappedPostAtoms:
-            atomObject = get_atom_object(atom, postAtomObjectList)
-            missingPostAtomsObjects.append(atomObject)
+        # Add any post atoms that aren't in the map or already in the missing atoms
+        mappedPostAtoms = [pair[1] for pair in mappedIDList]
+        totalPostAtomList = [postAtom.atomID for postAtom in postAtomObjectList]
+        unfoundMissingPostAtoms = [atomID for atomID in totalPostAtomList if atomID not in mappedPostAtoms and atomID not in missingPostAtomList]
+        missingPostAtomList.extend(unfoundMissingPostAtoms)
 
-    # Assert pre and post missing are the same length? I think this should be true at this point
-    missingCheckCounter = 1
-    while missingCheckCounter < 4 and len(missingPostAtomsObjects) > 0:
-        for preAtom in missingPreAtomsObjects:
-            missingPostAtomElements = [atom.element for atom in missingPostAtomsObjects]
-            elementOccurence = missingPostAtomElements.count(preAtom.element)
+        # Get post atom objects
+        missingPostAtomObjects = get_missing_atom_objects(missingPostAtomList, postAtomObjectList)
 
-            if elementOccurence == 0:
-                print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
+        map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, missingPreAtomList, mappedIDList, queue, preAtomObjectList)
 
-            elif elementOccurence == 1:
-                postIndex = missingPostAtomElements.index(preAtom.element)
-                matchMissing(preAtom, postIndex, missingPostAtomsObjects, mappedIDList, queue)
-                
-            elif elementOccurence > 1:
-                if preAtom.element == 'H':
-                    postHydrogenIndexList = [index for index, element in enumerate(missingPostAtomElements) if element == 'H']
-                    postIndex = postHydrogenIndexList.pop()
-                    matchMissing(preAtom, postIndex, missingPostAtomsObjects, mappedIDList, queue)
-                else:
-                    potentialPostAtomObjects = [atomObject for atomObject in missingPostAtomsObjects if atomObject.element == preAtom.element]
-                    postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index')
-                    if postIndex is not None:
-                        matchMissing(preAtom, postIndex, missingPostAtomsObjects, mappedIDList, queue)                                          
+        # Refresh missingAtomLists
+        missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
+        missingPostAtomList = update_missing_list(missingPostAtomList, mappedIDList, 1)
 
-        # Refresh missingPreAtomObjects so that it doesn't print needless error messages on subsequent loops
-        missingPreAtomsObjects = []
-        mappedPreAtoms = [pair[0] for pair in mappedIDList]
-        for atom in missingPreAtomsList:
-            if atom not in mappedPreAtoms:
-                atomObject = get_atom_object(atom, preAtomObjectList)
-                missingPreAtomsObjects.append(atomObject)
+        # Rerun the queue based on atom pairs added to queue from missingAtoms
+        run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
+        print(f'missingPreAtoms after loop {timeoutCounter}: {missingPreAtomList}')
 
-        missingCheckCounter += 1
+        timeoutCounter += 1
 
-    # Rerun the queue based on atom pairs added to queue from missingAtoms
-    run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomsList, missingPostAtomsList, elementDictList)
-
-    
-    return mappedIDList                                   
+    return mappedIDList
+                        
 
 # Could add edge atom T/F to atom class, could help distinguish elements of same type
 
