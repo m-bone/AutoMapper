@@ -3,7 +3,7 @@ from natsort import natsorted
 from collections import Counter, deque
 
 from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, get_neighbours, get_additional_neighbours
-from LammpsTreatmentFuncs import clean_data
+from LammpsTreatmentFuncs import clean_data, save_text_file
 from MappingFunctions import element_atomID_dict
 
 # Classes and functions for search
@@ -26,7 +26,7 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
 
     # Neighbour comparison - no inference for now
     neighbourComparison = [atomObject.firstNeighbourElements for atomObject in postNeighbourAtomObjectList]
-    neighbourFingerprint = [''.join(elements) for elements in neighbourComparison]
+    neighbourFingerprint = [''.join(elements) for elements in neighbourComparison] # sorted(neighbourComparison) sorted to get alphabetical fingerprints
 
     # Remove duplicate fingerprints
     countFingerprints = Counter(neighbourFingerprint)
@@ -181,9 +181,7 @@ class Atom():
 
         return mapList, missingPreAtoms, missingPostAtoms, queueAtoms
 
-def build_atom_objects(directory, fileName, elementDict):
-    os.chdir(directory)
-
+def build_atom_objects(fileName, elementDict):
     # Load molecule file
     with open(fileName, 'r') as f:
         lines = f.readlines()
@@ -196,11 +194,12 @@ def build_atom_objects(directory, fileName, elementDict):
     atomIDs = [row[0] for row in coords]
     bonds = get_data('Bonds', data, sections)
 
-    # Get top comment info for bonding and edge atoms
+    # Get top comment info for bonding, edge and delete atoms
     topComments = get_top_comments(lines)
     bondingAtoms = read_top_comments(topComments, 'Bonding_Atoms')
     edgeAtoms = read_top_comments(topComments, 'Edge_Atoms')
     edgeAtomFingerprints = read_top_comments(topComments, 'Edge_Atom_Fingerprints')
+    deleteAtoms = read_top_comments(topComments, 'Delete_Atoms')
     
     # Check for if edge atoms are present
     if edgeAtoms is not None:
@@ -241,7 +240,7 @@ def build_atom_objects(directory, fileName, elementDict):
         atom = Atom(atomID, elementDict[atomID], bondingAtom, edgeAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
         atomObjectList.append(atom)
     
-    return atomObjectList, bondingAtoms, edgeAtomDict
+    return atomObjectList, bondingAtoms, edgeAtomDict, deleteAtoms
 
 # Returns atom class object that has specific atom ID
 def get_atom_object(atomID, atomList):
@@ -298,6 +297,14 @@ def queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, pos
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preEdgeAtomID, postEdgeAtomID])
 
+def map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList):
+    # If delete atoms provided, add them to the mappedIDList. No purpose to including them in the queue
+    if preDeleteAtoms is not None:
+        assert postDeleteAtoms is not None, 'Delete atoms found in pre-bond file but not in post-bond file.'
+        assert len(preDeleteAtoms) == len(postDeleteAtoms), 'Pre-bond and post-bond files have different numbers of delete atoms.'
+        for index, atom in enumerate(preDeleteAtoms):
+            mappedIDList.append([atom, postDeleteAtoms[index]])
+
 def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList):
     while not queue.empty():
         currentAtoms = queue.get()
@@ -324,7 +331,7 @@ def get_missing_atom_objects(missingAtomList, atomObjectList):
 
     return missingAtomObjects
 
-def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, missingPreAtomList, mappedIDList, queue, preAtomObjectList):
+def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue):
     missingCheckCounter = 1
     while missingCheckCounter < 4 and len(missingPostAtomObjects) > 0:
         mappedPreAtomIndex = []
@@ -377,13 +384,14 @@ def update_missing_list(missingAtomList, mappedIDList, mapIndex):
 
 def map_from_path(directory, preFileName, postFileName, elementsByType):
     # Build atomID to element dict
-    preElementDict = element_atomID_dict(directory, preFileName, elementsByType)
-    postElementDict = element_atomID_dict(directory, postFileName, elementsByType)
+    os.chdir(directory)
+    preElementDict = element_atomID_dict(preFileName, elementsByType)
+    postElementDict = element_atomID_dict(postFileName, elementsByType)
     elementDictList = [preElementDict, postElementDict]
 
     # Generate atom class objects list
-    preAtomObjectList, preBondingAtoms, preEdgeAtomDict = build_atom_objects(directory, preFileName, preElementDict)
-    postAtomObjectList, postBondingAtoms, postEdgeAtomDict = build_atom_objects(directory, postFileName, postElementDict)
+    preAtomObjectList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms = build_atom_objects(preFileName, preElementDict)
+    postAtomObjectList, postBondingAtoms, postEdgeAtomDict, postDeleteAtoms = build_atom_objects(postFileName, postElementDict)
 
     # Initialise lists
     mappedIDList = []
@@ -398,6 +406,9 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
 
     # Populate queue with unique edge atoms if present
     queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue)
+
+    # Add delete atoms to the mappedIDList
+    map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList)
 
     # Search through queue creating new maps based on all elements in a given path
     run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
@@ -424,7 +435,7 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
         # Get post atom objects
         missingPostAtomObjects = get_missing_atom_objects(missingPostAtomList, postAtomObjectList)
 
-        map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, missingPreAtomList, mappedIDList, queue, preAtomObjectList)
+        map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue)
 
         # Refresh missingAtomLists
         missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
@@ -436,8 +447,57 @@ def map_from_path(directory, preFileName, postFileName, elementsByType):
 
         timeoutCounter += 1
 
+    # Order mappedIDList by preAtomID
+    mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
+
+    outputData = output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms)
+    save_text_file('automap.data', outputData)
+
     return mappedIDList
                         
+def output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
+    # Bonding atoms
+    bondingAtoms = [['BondingIDs', '\n']]
+    for atom in preBondingAtoms:
+        bondingAtoms.extend([[atom]])
+    bondingAtoms.extend(['\n'])
+
+    # Delete Atoms
+    deleteIDCount = []
+    deleteAtoms = []
+    if preDeleteAtoms is not None:
+        deleteIDCount.extend([[str(len(preDeleteAtoms)) + ' deleteIDs']])
+        deleteAtoms.extend([['DeleteIDs', '\n']])
+        for atom in preDeleteAtoms:
+            deleteAtoms.extend([[atom]])
+        deleteAtoms.extend(['\n'])
+
+    # Edge Atoms
+    edgeIDCount = []
+    edgeAtoms = []
+    if preEdgeAtomDict is not None:
+        edgeIDCount.extend([[str(len(preEdgeAtomDict)) + ' edgeIDs']])
+        edgeAtoms.extend([['EdgeIDs', '\n']])
+        for atom in preEdgeAtomDict.keys():
+            edgeAtoms.extend([[atom]])
+        edgeAtoms.extend(['\n'])
+    edgeIDCount.extend('\n')
+
+    # Equivalences
+    equivalences = [['#This is an AutoMapper generated map\n'], [str(len(mappedIDList)) + ' equivalences']]
+    equivalenceAtoms = [['Equivalences', '\n']]
+    for atomPair in mappedIDList:
+        equivalenceAtoms.extend([[atomPair[0] + '\t' + atomPair[1]]])
+
+    # Output data
+    output = []
+    totalOutput = [equivalences, deleteIDCount, edgeIDCount, bondingAtoms, deleteAtoms, edgeAtoms, equivalenceAtoms]
+
+    for section in totalOutput:
+        output.extend(section)
+
+    return output
+
 
 # Could add edge atom T/F to atom class, could help distinguish elements of same type
 
