@@ -44,7 +44,7 @@ from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file
 from LammpsSearchFuncs import get_data, find_partial_structure, find_sections
 from MappingFunctions import element_atomID_dict
 
-def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bondingAtoms):
+def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bondingAtoms, deleteAtoms=None):
     # Check that bonding atoms have been specified
     assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
 
@@ -108,7 +108,7 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     header.insert(0, '\n')
 
     # Format edge atom fingerprints
-    elementAtomIDDict = element_atomID_dict(directory, fileName, elementsByType)
+    elementAtomIDDict = element_atomID_dict(fileName, elementsByType)
     
     edgeElementFingerprintDict = edge_atom_fingerprint_strings(edgeAtomFingerprintDict, elementAtomIDDict)
 
@@ -123,13 +123,16 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     bondAtoms = format_comment(renumberedBondingAtoms, '# Bonding_Atoms ')
     edgeAtoms = format_comment(renumberedEdgeAtoms, '# Edge_Atoms ')
     edgeFingerprints = format_comment(edgeElementFingerprintList, '# Edge_Atom_Fingerprints ')
+    if deleteAtoms is not None:
+        deleteAtomComment = format_comment(deleteAtoms, '# Delete_Atoms')
+        commentString.extend([deleteAtomComment])
     commentString = [bondAtoms, edgeAtoms, edgeFingerprints]
     
     # Combine to one long output list
     outputList = []
     totalList = [commentString, header, masses, atoms, bonds, angles, dihedrals, impropers]
     
-    for keyword in totalList:
+    for keyword in totalList: # Collapses the list of list of lists into a list of lists...
         outputList.extend(keyword)
         
     # Output as text file

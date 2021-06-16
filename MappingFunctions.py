@@ -22,9 +22,7 @@ def get_atomIDs(directory, fileName):
 
     return atomIDs
 
-def element_atomID_dict(directory, fileName, elementsByType):
-    os.chdir(directory)
-
+def element_atomID_dict(fileName, elementsByType):
     # Load molecule file
     with open(fileName, 'r') as f:
         lines = f.readlines()

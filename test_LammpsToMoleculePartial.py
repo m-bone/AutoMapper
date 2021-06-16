@@ -1,9 +1,11 @@
+import os
 from LammpsToMoleculePartial import lammps_to_molecule_partial
 from LammpsTreatmentFuncs import clean_data
 from LammpsSearchFuncs import get_data, find_sections, get_top_comments
 
 def test_lammps_to_molecule_partial():
-    lammps_to_molecule_partial('/home/matt/Documents/Bond_React_Python/Test_Cases', 'cleanedpost_rx1.data', 'post_rx1_', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'], ['32', '15'])
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Test_Cases/DGEBA_DETDA') # Allows for relative pathing in pytest
+    lammps_to_molecule_partial(path, 'cleanedpost_rx1.data', 'post_rx1_', ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'], ['32', '15'])
 
     with open ('post_rx1_molecule.data', 'r') as f:
         mol = f.readlines()

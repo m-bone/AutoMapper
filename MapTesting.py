@@ -1,8 +1,11 @@
+import os
 from PathSearch import map_from_path
 
 class Reaction:
     def __init__(self, directory, preFileName, postFileName, elementByType):
-        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType)
+        startDir = os.getcwd() # Save primary main directory path to return to it after mapping
+        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType, 'debug')
+        os.chdir(startDir)
 
     def test_report(self, correctPostAtomIDs, reactionName):
         print(f'Reaction: {reactionName}')
@@ -29,7 +32,7 @@ class Reaction:
 
 # DGEBA-DETDA
 dgebaDetda = Reaction(
-    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/DGEBA_DETDA/FullModel/Reaction', 
+    'Test_Cases/Map_Tests/DGEBA_DETDA/', 
     'pre-molecule.data', 
     'post-molecule.data', 
     ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O']
@@ -60,7 +63,7 @@ dgebaDetda.test_report(correctDgebaDetda, 'DGEBA-DETDA')
 
 # Ethyl Ethanoate
 ethylEthanoate = Reaction(
-    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Ethyl_Ethanoate/Reaction', 
+    'Test_Cases/Map_Tests/Ethyl_Ethanoate', 
     'pre-molecule.data', 
     'post-molecule.data', 
     ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O']
@@ -87,13 +90,9 @@ correctEthylEthanoate = {
 }
 ethylEthanoate.test_report(correctEthylEthanoate, 'Ethyl Ethanoate')
 
-# 15pre maps to 6post instead of 17pre. This is correct as far as the code is concerned, but is the wrong map.
-# Need to test what LAMMPS does when it receives a wrong assignment like this - will it error?
-
-
 # Methane to Ethane 
 ethane = Reaction(
-    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Methane_Ethane/Reaction', 
+    'Test_Cases/Map_Tests/Methane_Ethane', 
     'pre-molecule.data', 
     'post-molecule.data', 
     ['H', 'C']
@@ -112,9 +111,9 @@ correctEthane = {
 }
 ethane.test_report(correctEthane, 'Methane to Ethane')
 
-# LAMMPS Example - Nylon 6,6
+# LAMMPS Example - Nylon 6,6 taken from 'nylon,6-6_melt' example
 nylon = Reaction(
-    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Nylon6-6', 
+    'Test_Cases/Map_Tests/Lammps_Nylon', 
     'rxn1_stp1_unreacted.data_template', 
     'rxn1_stp1_reacted.data_template', 
     ['C', 'N', 'H', 'H', 'C', 'O', 'H', 'O', 'N', 'H', 'O']
@@ -143,7 +142,7 @@ nylon.test_report(correctNylon, 'Nylon Melt Lammps Example')
 
 # Phenol O-Alkylation
 phenAlkyl = Reaction(
-    '/home/matt/Documents/Oct20-Dec20/Bonding_Test/Phenol_Alkylation/Reaction', 
+    'Test_Cases/Map_Tests/Phenol_Alkylation', 
     'pre-molecule.data', 
     'post-molecule.data', 
     ['H', 'H', 'C', 'C', 'O', 'O']
@@ -175,6 +174,66 @@ correctPhenAlkyl = {
     '24': ['21', '22']
 }
 phenAlkyl.test_report(correctPhenAlkyl, 'Phenol O-Alkylation')
+
+# Symmetric Diol
+symmDiol = Reaction(
+    'Test_Cases/Map_Tests/Symmetric_Diol', 
+    'pre-molecule.data', 
+    'post-molecule.data', 
+    ['H', 'H', 'C', 'C', 'O', 'O']
+)
+correctSymmDiol = {
+    '1': ['1'],
+    '2': ['15'],
+    '3': ['3'],
+    '4': ['4', '14', '16', '2'],
+    '5': ['5'],
+    '6': ['6', '12'],
+    '7': ['7', '11'],
+    '8': ['8'],
+    '9': ['9', '10'],
+    '10': ['9', '10'],
+    '11': ['7', '11'],
+    '12': ['6', '12'],
+    '13': ['13'],
+    '14': ['4', '14', '16', '2'],
+    '15': ['4', '14', '16', '2'],
+    '16': ['4', '14', '16', '2'],
+    '17': ['17']
+}
+symmDiol.test_report(correctSymmDiol, 'Symmetric Diol')
+
+# # Edge Atom Symmetry
+# eaSymm = Reaction(
+#     'Test_Cases/Map_Tests/Edge_Atom_Symmetry', 
+#     'pre-molecule.data', 
+#     'post-molecule.data', 
+#     ['H', 'C', 'C', 'O', 'O']
+# )
+# correctEASymm = {
+#     '1': ['1'],
+#     '2': ['20'],
+#     '3': ['3', '10'],
+#     '4': ['4'],
+#     '5': ['5', '6'],
+#     '6': ['5', '6'],
+#     '7': ['7'],
+#     '8': ['8'],
+#     '9': ['9'],
+#     '10': ['9', '10'],
+#     '11': ['11'],
+#     '12': ['12', '13'],
+#     '13': ['12', '13'],
+#     '14': ['14'],
+#     '15': ['15'],
+#     '16': ['16'],
+#     '17': ['17'],
+#     '18': ['18', '19', '21', '2'],
+#     '19': ['18', '19', '21', '2'],
+#     '20': ['18', '19', '21', '2'],
+#     '21': ['18', '19', '21', '2'],
+# }
+# eaSymm.test_report(correctEASymm, 'Edge Atom Symmetry')
 
 # Validation idea
 # Search for ambiguous groups in the post molecule by comparing post atom to all post atoms

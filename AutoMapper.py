@@ -34,6 +34,7 @@ parser.add_argument('--coeff_file', metavar='coeff_file', nargs=1, help='Argumen
 parser.add_argument('--save_name', metavar='save_name', nargs=1, help='Argument for "molecule", "molecule-partial" and "lammps-partial" tools: sets the file name for the new file')
 parser.add_argument('--ba', metavar='bonding_atoms', nargs=2, help='Argument for "molecule", "molecule-partial" and "lammps-partial" tools: atom IDs of the atoms that will be involved in creating a new bond')
 parser.add_argument('--ebt', metavar='elements_by_type', nargs='+', help='Argument for "molecule-partial" and "lammps-partial" tools: list of elements symbols in the same order as the types specified in the data file')
+parser.add_argument('--da', metavar='delete_atoms', nargs='+', help='Argument for "molecule", "molecule-partial" and "lammps-partial" tools: atom IDs of the atoms that will be deleted after the bond has formed')
 
 # Get arguments from parser
 args = parser.parse_args()
@@ -63,12 +64,12 @@ if tool == "clean":
 
 # Produce molecule data file
 elif tool == "molecule":
-    lammps_to_molecule(directory, args.data_files[0], args.save_name[0], args.ba)
+    lammps_to_molecule(directory, args.data_files[0], args.save_name[0], args.ba, args.da)
 
 # Produce partial molecule data file
 elif tool == "molecule-partial":
-    lammps_to_molecule_partial(directory, args.data_files[0], args.save_name[0], args.ebt, args.ba)
+    lammps_to_molecule_partial(directory, args.data_files[0], args.save_name[0], args.ebt, args.ba, args.da)
 
 # Produce partial lammps data file
 elif tool == "lammps-partial":
-    lammps_to_lammps_partial(directory, args.data_files[0], args.save_name[0], args.ebt, args.ba)
+    lammps_to_lammps_partial(directory, args.data_files[0], args.save_name[0], args.ebt, args.ba, args.da)

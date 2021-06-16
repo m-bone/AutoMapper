@@ -66,7 +66,7 @@ def test_get_third_neighbours():
     assert checkValues == expected
 
 def test_get_partial_structure():
-    os.chdir('/home/matt/Documents/Bond_React_Python/Test_Cases/DGEBA_DETDA/')
+    os.chdir(path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Test_Cases/DGEBA_DETDA/')) # Allows for relative pathing in pytest
 
     # Load file into python as a list of lists
     with open('cleanedpre-reaction.data', 'r') as f:
