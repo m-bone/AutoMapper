@@ -1,11 +1,31 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 16/06/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# This is the core mapping code for solving molecule maps using a path search
+# approach. Requires two molecule files and a few user provided parameters.
+# Designed to work with molecule files created with LammpsToMolecule or 
+# LammpsToMoleculePartial as bonding, edge and delete atom values are scraped 
+# from the header of molecule files.
+##############################################################################
+
 import os
 import logging
 from natsort import natsorted
 from collections import Counter, deque
 
-from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, get_neighbours, get_additional_neighbours
+from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, get_neighbours, get_additional_neighbours, element_atomID_dict
 from LammpsTreatmentFuncs import clean_data, save_text_file
-from MappingFunctions import element_atomID_dict
 
 # Classes and functions for search
 class Queue:
@@ -457,9 +477,12 @@ def output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
 
     return output
 
-def map_from_path(directory, preFileName, postFileName, elementsByType, logLevel):
+def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     # Set log level
-    logging.basicConfig(level=getattr(logging, logLevel.upper()))
+    if debug:
+        logging.basicConfig(level='DEBUG')
+    else:
+        logging.basicConfig(level='INFO')
 
     # Build atomID to element dict
     os.chdir(directory)
@@ -521,7 +544,7 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, logLevel
 
         # Rerun the queue based on atom pairs added to queue from missingAtoms
         run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
-        print(f'missingPreAtoms after loop {timeoutCounter}: {missingPreAtomList}')
+        logging.debug(f'missingPreAtoms after loop {timeoutCounter}: {missingPreAtomList}') 
 
         timeoutCounter += 1
 

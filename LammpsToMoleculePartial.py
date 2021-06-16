@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 08/04/2021
+# Last Updated: 16/06/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -28,7 +28,7 @@
 #      e  impropers
 
 #      f  atom types
-#      g bond types
+#      g  bond types
 #      h  angle types
 #      i  dihedral types
 #      j  improper types
@@ -39,10 +39,8 @@
 ##############################################################################
 
 import os
-from natsort import natsorted
 from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file, refine_data, format_comment, edge_atom_fingerprint_strings
-from LammpsSearchFuncs import get_data, find_partial_structure, find_sections
-from MappingFunctions import element_atomID_dict
+from LammpsSearchFuncs import get_data, find_partial_structure, find_sections, element_atomID_dict
 
 def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bondingAtoms: list, deleteAtoms=None):
     # Check that bonding atoms have been specified
@@ -64,7 +62,7 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     # Get original bonds data
     originalBonds = get_data('Bonds', tidiedLines, sectionIndexList)
     
-    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, bondDistance=3)
+    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3)
 
     # Get atoms data
     atoms = get_data('Atoms', tidiedLines, sectionIndexList)
@@ -126,10 +124,13 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     bondAtoms = format_comment(renumberedBondingAtoms, '# Bonding_Atoms ')
     edgeAtoms = format_comment(renumberedEdgeAtoms, '# Edge_Atoms ')
     edgeFingerprints = format_comment(edgeElementFingerprintList, '# Edge_Atom_Fingerprints ')
-    if deleteAtoms is not None:
-        deleteAtomComment = format_comment(deleteAtoms, '# Delete_Atoms')
-        commentString.extend([deleteAtomComment])
     commentString = [bondAtoms, edgeAtoms, edgeFingerprints]
+    
+    # Handle deleteAtoms if the users has specified them
+    if deleteAtoms is not None:
+        renumberedDeleteAtoms = [renumberedAtomIDDict[da] for da in deleteAtoms]
+        deleteAtomComment = format_comment(renumberedDeleteAtoms, '# Delete_Atoms')
+        commentString.extend([deleteAtomComment])
 
     # Combine to one long output list
     outputList = []

@@ -78,7 +78,7 @@ def test_get_partial_structure():
     originalBonds = get_data('Bonds', tidiedLines, sectionIndexList)
     bondingAtoms = ['65', '28'] # 'C', 'N'
 
-    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, bondDistance=3)
+    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, deleteAtoms=None, bondDistance=3)
 
     atomCheck = inspect_values(validAtomSet, ['1', '2', '3', '6', '8', '9', '13', '16', '28', '29', '37', '63', '64', '65', '66', '67', '68', '69', '70', '71'])
     edgeAtomCheck = inspect_values(edgeAtomList, ['1', '3', '13', '16', '37'])

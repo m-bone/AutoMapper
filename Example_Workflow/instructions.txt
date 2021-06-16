@@ -1,0 +1,24 @@
+This is an example using the fictional reaction between phenol and an alkane with H2 given as a byproduct. I will likely replace this with a better example later, once I have a good intricate one that bonds quickly in LAMMPS.
+
+Commands to generate an 'automap.data' file are as follows:
+
+Clean the data files and system.in.settings
+	AutoMapper.py . clean pre_reaction.data post_reaction.data --coeff_file system.in.settings
+	
+Create pre-bond partial molecule file
+	AutoMapper.py . molecule-partial cleanedpre_reaction.data --save_name pre- --ba 13 14 	--da 12 19 --ebt H H C C O O
+	
+Create post-bond partial molecule file
+	AutoMapper.py . molecule-partial cleanedpost_reaction.data --save_name post- --ba 13 14 	--da 23 24 --ebt H H C C O O
+
+NOTE: for both these molecule files the bonding atom order represents the same atoms in each file i.e. the 13 is the reacting oxygen and 14 is the reacting carbon. The order of the atoms should always be the same.
+
+Create the map
+	AutoMapper.py . map pre-molecule.data post-molecule.data --ebt H H C C O O
+	
+NOTE: the order of files for the map should always be "pre-bond molecule post-bond molecule".
+
+Run the LAMMPS code
+	lmp -in run.bond
+
+You should see the 0 turn to a 1 next to the step count in the thermo output.

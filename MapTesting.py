@@ -1,10 +1,30 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 16/06/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# Runs a series of different test molecules and print out resultant bonding pairs.
+# These pairs are compared to the known correct pairs and an accuracy percentage
+# is given. These tests are not designed to be chemically practical; they're
+# designed to tax different parts of the path search system to check functionality
+##############################################################################
+
 import os
 from PathSearch import map_from_path
 
 class Reaction:
     def __init__(self, directory, preFileName, postFileName, elementByType):
         startDir = os.getcwd() # Save primary main directory path to return to it after mapping
-        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType, 'debug')
+        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType, True)
         os.chdir(startDir)
 
     def test_report(self, correctPostAtomIDs, reactionName):
@@ -202,44 +222,3 @@ correctSymmDiol = {
     '17': ['17']
 }
 symmDiol.test_report(correctSymmDiol, 'Symmetric Diol')
-
-# # Edge Atom Symmetry
-# eaSymm = Reaction(
-#     'Test_Cases/Map_Tests/Edge_Atom_Symmetry', 
-#     'pre-molecule.data', 
-#     'post-molecule.data', 
-#     ['H', 'C', 'C', 'O', 'O']
-# )
-# correctEASymm = {
-#     '1': ['1'],
-#     '2': ['20'],
-#     '3': ['3', '10'],
-#     '4': ['4'],
-#     '5': ['5', '6'],
-#     '6': ['5', '6'],
-#     '7': ['7'],
-#     '8': ['8'],
-#     '9': ['9'],
-#     '10': ['9', '10'],
-#     '11': ['11'],
-#     '12': ['12', '13'],
-#     '13': ['12', '13'],
-#     '14': ['14'],
-#     '15': ['15'],
-#     '16': ['16'],
-#     '17': ['17'],
-#     '18': ['18', '19', '21', '2'],
-#     '19': ['18', '19', '21', '2'],
-#     '20': ['18', '19', '21', '2'],
-#     '21': ['18', '19', '21', '2'],
-# }
-# eaSymm.test_report(correctEASymm, 'Edge Atom Symmetry')
-
-# Validation idea
-# Search for ambiguous groups in the post molecule by comparing post atom to all post atoms
-# I can find this easily and it can confirm if something should be an ambiguous group
-# Could cause issues if the BPDM manages to split two things that should be pairs - this check may find things that the BPDM doesn't
-# Tool would help explin why BPDM works in some cases but less in others
-# I can also predict how many ambiguous groups in my pre and post molecule with this method
-# This could check if I have as many as I expect and it may help identify atoms that have moved - can use ambiguous pairs as a useful tool
-# Can I use ambiguous pairs that don't exist before but do after and visa versa to identify moved atoms

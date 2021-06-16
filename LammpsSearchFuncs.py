@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 23/02/2021
+# Last Updated: 16/06/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -16,6 +16,7 @@
 # These functions work for 'read_data' files and 'molecule' files
 ##############################################################################
 import re
+from LammpsTreatmentFuncs import clean_data
 
 # Get data
 def get_data(sectionName, lines, sectionIndexList, useExcept = True):
@@ -109,9 +110,15 @@ def search_loop(bonds, bondAtom):
     
     return nextBondAtomList
         
-def find_partial_structure(bondingAtoms, originalBonds, bondDistance=3):
-# Find bonds involving bonding atoms
-    validAtomSet = set(bondingAtoms)
+def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3):
+    # Find bonds within a specified distance of the bonding atoms
+    
+    # Add delete atoms to valid atoms if present
+    initialValidAtoms = bondingAtoms.copy()
+    if deleteAtoms is not None:
+        initialValidAtoms.extend(deleteAtoms) # Allows partial structure tools to work when byproducts are formed and deleted
+
+    validAtomSet = set(initialValidAtoms)
     edgeAtomList = []
 
     for bondAtom in bondingAtoms:
@@ -218,3 +225,25 @@ def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, un
                     totalNeighbourSet.remove(neighbour)
 
     return list(totalNeighbourSet)
+
+def element_atomID_dict(fileName, elementsByType):
+    # Load molecule file
+    with open(fileName, 'r') as f:
+        lines = f.readlines()
+
+    # Clean data and get charge
+    data = clean_data(lines)
+    sections = find_sections(data)
+    try: # Try is for getting types from molecule file types
+        types = get_data('Types', data, sections, useExcept=False)
+    except ValueError: # Exception gets types from standard lammps file type
+        atoms = get_data('Atoms', data, sections, useExcept=False)
+        types = [[atomRow[0], atomRow[2]] for atomRow in atoms]
+    typesDict = {row[0]: row[1] for row in types} # Keys: ID, Val: Type
+
+    # Ensure elementsByTypes is uppercase
+    elementsByTypeDict = {index+1: val.upper() for index, val in enumerate(elementsByType)} # Keys: Type, Val: Elements
+
+    elementIDDict = {key: elementsByTypeDict[int(val)] for key, val in typesDict.items()}
+
+    return elementIDDict

@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 23/02/2021
+# Last Updated: 16/06/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -13,7 +13,7 @@
 #
 # File Description:
 # A range of functions designed to pre-process, search, and save LAMMPS
-# 'read_data' input files. Built for Bond_React processing but can be applied
+# 'read_data' input files. Built for AutoMapper processing but can be applied
 # to a wide range of problems
 ##############################################################################
 
