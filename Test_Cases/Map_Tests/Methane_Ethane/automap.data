@@ -1,0 +1,27 @@
+#This is an AutoMapper generated map
+
+10 equivalences
+2 deleteIDs
+
+BondingIDs 
+
+1
+6
+
+DeleteIDs 
+
+5
+10
+
+Equivalences 
+
+1	1
+2	8
+3	7
+4	6
+5	9
+6	2
+7	5
+8	4
+9	3
+10	10

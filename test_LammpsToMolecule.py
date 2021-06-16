@@ -1,10 +1,12 @@
+import os
 from LammpsToMolecule import lammps_to_molecule
 from LammpsTreatmentFuncs import clean_data
 from LammpsSearchFuncs import get_data, find_sections
 
 def test_lammps_to_molecule():
-    lammps_to_molecule('/home/matt/Documents/Bond_React_Python/Test_Cases', 'cleanedpre-system.data', 'pre')
-    with open ('premolecule.data', 'r') as f:
+    path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Test_Cases/Methane_Ethane') # Allows for relative pathing in pytest
+    lammps_to_molecule(path, 'cleanedpre_reaction.data', 'pre-', ['1', '6'])
+    with open ('pre-molecule.data', 'r') as f:
         mol = f.readlines()
     
     mol = clean_data(mol)

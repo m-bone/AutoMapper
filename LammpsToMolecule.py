@@ -39,10 +39,10 @@
 ##############################################################################
 
 import os
-from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file
+from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file, format_comment
 from LammpsSearchFuncs import get_data, find_sections
 
-def lammps_to_molecule(directory, fileName, saveName):
+def lammps_to_molecule(directory, fileName, saveName, bondingAtoms: list, deleteAtoms=None):
     # Go to file directory
     os.chdir(directory)
 
@@ -91,9 +91,16 @@ def lammps_to_molecule(directory, fileName, saveName):
     coords = [[atom[0], atom[4], atom[5], atom[6]] for atom in atoms]
     coords = add_section_keyword('Coords', coords)
 
+    # Create bonding atom comment
+    bondAtoms = format_comment(bondingAtoms, '# Bonding_Atoms ')
+    commentString = [bondAtoms]
+    if deleteAtoms is not None:
+        deleteAtomComment = format_comment(deleteAtoms, '# Delete_Atoms')
+        commentString.extend([deleteAtomComment])
+
     # Combine to one long output list
     outputList = []
-    totalList = [header, types, charges, coords, bonds, angles, dihedrals, impropers]
+    totalList = [commentString, header, types, charges, coords, bonds, angles, dihedrals, impropers]
     
     for keyword in totalList:
         outputList.extend(keyword)
