@@ -40,7 +40,7 @@
 
 import os
 from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file, refine_data, format_comment, edge_atom_fingerprint_strings
-from LammpsSearchFuncs import get_data, find_partial_structure, find_sections, element_atomID_dict
+from LammpsSearchFuncs import get_data, find_partial_structure, edge_atom_fingerprint_ids, find_sections, element_atomID_dict
 
 def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bondingAtoms, deleteAtoms=None):
     # Check that bonding atoms have been specified
@@ -60,9 +60,10 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     sectionIndexList = find_sections(tidiedLines)
 
     # Get original bonds data
-    originalBonds = get_data('Bonds', tidiedLines, sectionIndexList)
+    originalBondList = get_data('Bonds', tidiedLines, sectionIndexList)
     
-    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3)
+    validAtomSet, edgeAtomList = find_partial_structure(bondingAtoms, originalBondList, deleteAtoms, bondDistance=3)
+    edgeAtomFingerprintDict = edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet)
     
     # Get masses data
     masses = get_data('Masses', tidiedLines, sectionIndexList)
@@ -74,7 +75,7 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     atoms = add_section_keyword('Atoms', atoms)
     
     # Get new bonds data
-    bonds = refine_data(originalBonds, [2, 3], validAtomSet, renumberedAtomIDDict)
+    bonds = refine_data(originalBondList, [2, 3], validAtomSet, renumberedAtomIDDict)
     bonds = add_section_keyword('Bonds', bonds)
     
     # Get angles data
@@ -111,7 +112,7 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     edgeElementFingerprintDict = edge_atom_fingerprint_strings(edgeAtomFingerprintDict, elementAtomIDDict)
 
     # Convert dictionary to list of lists of fingerprint strings - order is the same as renumbered edge atoms
-    edgeElementFingerprintList = [[atomString] for atomString in edgeElementFingerprintDict.values()]
+    edgeElementFingerprintList = [atomString for atomString in edgeElementFingerprintDict.values()]
 
     # Renumber bonding and edge atom comments with new atomIDs
     renumberedBondingAtoms = [renumberedAtomIDDict[ba] for ba in bondingAtoms]
@@ -122,6 +123,8 @@ def lammps_to_lammps_partial(directory, fileName, saveName, elementsByType, bond
     edgeAtoms = format_comment(renumberedEdgeAtoms, '# Edge_Atoms ')
     edgeFingerprints = format_comment(edgeElementFingerprintList, '# Edge_Atom_Fingerprints ')
     commentString = [bondAtoms, edgeAtoms, edgeFingerprints]
+
+    # Handle deleteAtoms if the users has specified them
     if deleteAtoms is not None:
         deleteAtomComment = format_comment(deleteAtoms, '# Delete_Atoms')
         commentString.extend([deleteAtomComment])

@@ -24,7 +24,7 @@ from PathSearch import map_from_path
 class Reaction:
     def __init__(self, directory, preFileName, postFileName, elementByType):
         startDir = os.getcwd() # Save primary main directory path to return to it after mapping
-        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType, True)
+        self.mappedIDList = map_from_path(directory, preFileName, postFileName, elementByType, True, mappedIDList=[])
         os.chdir(startDir)
 
     def test_report(self, correctPostAtomIDs, reactionName):

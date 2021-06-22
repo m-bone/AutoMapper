@@ -1,4 +1,4 @@
-# AutoMapper
+# AutoMapper - Beta
 
 AutoMapper is a package of tools designed to automate the creation of files required for the [**LAMMPS**](https://lammps.sandia.gov) command _fix bond/react_. These tools allow the user to convert LAMMPS 'read_data' format files into partial structure molecule files which can be used to create a map file of a reaction. AutoMapper has been designed to work alongside [**Moltemplate**](https://github.com/jewettaij/moltemplate) output files, but will work in general cases so long as some assumptions are followed. See the _Assumptions_ section for details.
 
@@ -22,7 +22,7 @@ Below are command line examples for the different tools.
 ```
 AutoMapper.py . clean pre-reaction.data post-reaction.data --coeff_file system.in.settings
 AutoMapper.py . molecule cleanedpre-reaction.data --save_name pre- --ba 1 4
-AutoMapper.py . molecule-partial cleanedpost-reaction.data --save_name post- --ba 3 6 --da 7 8 9 --ebt H H C C O
+AutoMapper.py . molecule-partial cleanedpost-reaction.data --save_name pre- --ba 3 6 --da 7 9 --ebt H C C O
 AutoMapper.py . lammps-partial cleanedpost-reaction.data --save_name post- --ba 3 6 --ebt H Si O O
 AutoMapper.py . map pre-molecule.data post-molecule.data --ebt H H C C N O O 
 ```

@@ -40,9 +40,9 @@
 
 import os
 from LammpsTreatmentFuncs import clean_data, add_section_keyword, save_text_file, refine_data, format_comment, edge_atom_fingerprint_strings
-from LammpsSearchFuncs import get_data, find_partial_structure, find_sections, element_atomID_dict
+from LammpsSearchFuncs import get_data, find_partial_structure, extend_edge_atoms, edge_atom_fingerprint_ids, find_sections, element_atomID_dict
 
-def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bondingAtoms: list, deleteAtoms=None):
+def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bondingAtoms: list, deleteAtoms=None, extendEdgeAtomsDict=None):
     # Check that bonding atoms have been specified
     assert len(bondingAtoms) > 0, 'No bonding atoms have been specified'
 
@@ -60,16 +60,19 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
     sectionIndexList = find_sections(tidiedLines)
 
     # Get original bonds data
-    originalBonds = get_data('Bonds', tidiedLines, sectionIndexList)
+    originalBondList = get_data('Bonds', tidiedLines, sectionIndexList)
     
-    validAtomSet, edgeAtomList, edgeAtomFingerprintDict = find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3)
+    validAtomSet, edgeAtomList = find_partial_structure(bondingAtoms, originalBondList, deleteAtoms, bondDistance=3)
+    edgeAtomFingerprintDict = edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet)
+    if extendEdgeAtomsDict is not None:
+        validAtomSet, edgeAtomList = extend_edge_atoms(extendEdgeAtomsDict, originalBondList, validAtomSet)
 
     # Get atoms data
     atoms = get_data('Atoms', tidiedLines, sectionIndexList)
     atoms, renumberedAtomIDDict = refine_data(atoms, 0, validAtomSet)
 
     # Get new bonds data
-    bonds = refine_data(originalBonds, [2, 3], validAtomSet, renumberedAtomIDDict)
+    bonds = refine_data(originalBondList, [2, 3], validAtomSet, renumberedAtomIDDict)
     bonds = add_section_keyword('Bonds', bonds)
     
     # Get angles data
@@ -141,3 +144,5 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
         
     # Output as text file
     save_text_file(saveName + 'molecule.data', outputList)
+
+    return renumberedAtomIDDict

@@ -93,8 +93,9 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
 
 
 class Atom():
-    def __init__(self, atomID, element, bondingAtom, edgeAtom, neighbourIDs, secondNeighbourIDs, thirdNeighbourIDs, neighbourElements, secondNeighbourElements, thirdNeighbourElements):
+    def __init__(self, atomID, atomType, element, bondingAtom, edgeAtom, neighbourIDs, secondNeighbourIDs, thirdNeighbourIDs, neighbourElements, secondNeighbourElements, thirdNeighbourElements):
         self.atomID = atomID
+        self.atomType = atomType
         self.element = element
         self.bondingAtom = bondingAtom
         self.edgeAtom = edgeAtom
@@ -131,7 +132,7 @@ class Atom():
         self.mappedNeighbourElements = [elementDict[atomID]for atomID in self.mappedNeighbourIDs]
 
 
-    def map_elements(self, atomObject, preAtomObjectList, postAtomObjectList):
+    def map_elements(self, atomObject, preAtomObjectDict, postAtomObjectDict):
         # Output variables
         mapList = []
         missingPreAtoms = []
@@ -202,13 +203,10 @@ class Atom():
                     # Get neighbour post atoms objects
                     postNeighbourIndices = [index for index, val in enumerate(atomObject.mappedNeighbourElements) if val == neighbour]
                     postNeighbourAtomIDs = [atomObject.mappedNeighbourIDs[i] for i in postNeighbourIndices]
-                    postNeighbourAtomObjects = [postAtomObject for postAtomObject in postAtomObjectList if postAtomObject.atomID in postNeighbourAtomIDs]
+                    postNeighbourAtomObjects = [postAtomObjectDict[atomID] for atomID in postNeighbourAtomIDs] 
 
                     # Get possible pre atom object
-                    preNeighbourAtomObject = 0
-                    for preAtomObject in preAtomObjectList:
-                        if preAtomObject.atomID == self.mappedNeighbourIDs[preIndex]:
-                            preNeighbourAtomObject = preAtomObject
+                    preNeighbourAtomObject = preAtomObjectDict[self.mappedNeighbourIDs[preIndex]]
 
                     # Find the post atom ID for the current pre atom
                     postNeighbourAtomID = compare_symmetric_atoms(postNeighbourAtomObjects, preNeighbourAtomObject, 'atomID')
@@ -235,9 +233,9 @@ def build_atom_objects(fileName, elementDict):
     # Clean data and get coords and bonds
     data = clean_data(lines)
     sections = find_sections(data)
-    coords = get_data('Coords', data, sections)
+    types = get_data('Types', data, sections)
 
-    atomIDs = [row[0] for row in coords]
+    atomIDs = [row[0] for row in types]
     bonds = get_data('Bonds', data, sections)
 
     # Get top comment info for bonding, edge and delete atoms
@@ -260,8 +258,9 @@ def build_atom_objects(fileName, elementDict):
     def get_elements(neighbourIDs, elementDict):
         return [elementDict[atomID]for atomID in neighbourIDs]
 
-    atomObjectList = []
-    for atomID in atomIDs:
+    atomObjectDict = {}
+    for index, atomID in enumerate(atomIDs):
+        atomType = types[index][1]
         neighbours = neighboursDict[atomID]
         secondNeighbours = get_additional_neighbours(neighboursDict, atomID, neighbours)
         thirdNeighbours = get_additional_neighbours(neighboursDict, atomID, secondNeighbours)
@@ -283,46 +282,30 @@ def build_atom_objects(fileName, elementDict):
         else:
             edgeAtom = None
 
-        atom = Atom(atomID, elementDict[atomID], bondingAtom, edgeAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
-        atomObjectList.append(atom)
+        atom = Atom(atomID, atomType, elementDict[atomID], bondingAtom, edgeAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
+        atomObjectDict[atomID] = atom
     
-    return atomObjectList, bondingAtoms, edgeAtomDict, deleteAtoms
+    return atomObjectDict, bondingAtoms, edgeAtomDict, deleteAtoms
 
-# Returns atom class object that has specific atom ID
-def get_atom_object(atomID, atomList):
-    '''
-    Returns the atom object for a specific atom ID. Potential uses include turning queue
-    atom IDs into atom objects for next stage of queue processing.
-    Args:
-        atomID: A string integer atom ID
-        atomList: List of all possible atom objects, either pre- or post-bond
-
-    Returns:
-        Atom object
-    '''
-    for atom in atomList:
-        if atom.atomID == atomID:
-            return atom
-
-def add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList):
+def add_to_queue(queue, queueAtoms, preAtomObjectDict, postAtomObjectDict):
     queueAtomObjects = []
     for pair in queueAtoms:
-        preAtom = get_atom_object(pair[0], preAtomObjectList)
-        postAtom = get_atom_object(pair[1], postAtomObjectList)
+        preAtom = preAtomObjectDict[pair[0]]
+        postAtom = postAtomObjectDict[pair[1]]
         queueAtomObjects.append([preAtom, postAtom])
     queue.add(queueAtomObjects)
 
-def queue_bond_atoms(preAtomObjectList, preBondingAtoms, postAtomObjectList, postBondingAtoms, mappedIDList, queue):
+def queue_bond_atoms(preAtomObjectDict, preBondingAtoms, postAtomObjectDict, postBondingAtoms, mappedIDList, queue):
     # Loop through bonding atoms, getting atom objects and adding them to queue and mapped list
     for index, preBondAtom in enumerate(preBondingAtoms):
-        preAtomObject = get_atom_object(preBondAtom, preAtomObjectList)
-        postAtomObject = get_atom_object(postBondingAtoms[index], postAtomObjectList)
+        preAtomObject = preAtomObjectDict[preBondAtom]
+        postAtomObject = postAtomObjectDict[postBondingAtoms[index]]
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preBondAtom, postBondingAtoms[index]])
         logging.debug(f'Pre: {preBondAtom}, Post: {postBondingAtoms[index]} found with user specified bond atom')
 
 
-def queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue):
+def queue_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, postEdgeAtomDict, mappedIDList, queue):
     # Skip function call if no edge atoms present
     if preEdgeAtomDict is None:
         return
@@ -338,8 +321,8 @@ def queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, pos
         preEdgeAtomID = list(preEdgeAtomDict.keys())[list(preEdgeAtomDict.values()).index(fingerprint)]
         postEdgeAtomID = list(postEdgeAtomDict.keys())[list(postEdgeAtomDict.values()).index(fingerprint)]
         
-        preAtomObject = get_atom_object(preEdgeAtomID, preAtomObjectList)
-        postAtomObject = get_atom_object(postEdgeAtomID, postAtomObjectList)
+        preAtomObject = preAtomObjectDict[preEdgeAtomID]
+        postAtomObject = postAtomObjectDict[postEdgeAtomID]
         
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preEdgeAtomID, postEdgeAtomID])
@@ -354,16 +337,16 @@ def map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList):
             mappedIDList.append([preAtom, postDeleteAtoms[index]])
             logging.debug(f'Pre: {preAtom}, Post: {postDeleteAtoms[index]} found with specified delete atom')
 
-def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList):
+def run_queue(queue, mappedIDList, preAtomObjectDict, postAtomObjectDict, missingPreAtomList, missingPostAtomList, elementDictList):
     while not queue.empty():
         currentAtoms = queue.get()
         for mainIndex, atom in enumerate(currentAtoms):
             atom.check_mapped(mappedIDList, mainIndex, elementDictList[mainIndex])
         
-        newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1], preAtomObjectList, postAtomObjectList)
+        newMap, missingPreAtoms, missingPostAtoms, queueAtoms = currentAtoms[0].map_elements(currentAtoms[1], preAtomObjectDict, postAtomObjectDict)
 
         # Convert queue atoms to atom class objects and add to queue
-        add_to_queue(queue, queueAtoms, preAtomObjectList, postAtomObjectList)
+        add_to_queue(queue, queueAtoms, preAtomObjectDict, postAtomObjectDict)
 
         # Extend missing lists
         missingPreAtomList.extend(missingPreAtoms)
@@ -372,10 +355,10 @@ def run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missin
         # Add new pairs to mapped ID list
         mappedIDList.extend(newMap)
 
-def get_missing_atom_objects(missingAtomList, atomObjectList):
+def get_missing_atom_objects(missingAtomList, atomObjectDict):
     missingAtomObjects = []
     for atom in missingAtomList:
-        atomObject = get_atom_object(atom, atomObjectList)
+        atomObject = atomObjectDict[atom]
         missingAtomObjects.append(atomObject)
 
     return missingAtomObjects
@@ -434,6 +417,56 @@ def update_missing_list(missingAtomList, mappedIDList, mapIndex):
 
     return newMissingAtomList
 
+def verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, mappedIDList):
+    # Convert mappedIDList to mappedIDDict
+    mappedIDDict = {pair[0]: pair[1] for pair in mappedIDList}
+
+    # Compare if pre and post atom types are the same, return True if they are not
+    def compare_atom_type(preAtom):
+        preAtomType = preAtomObjectDict[preAtom].atomType
+        pairAtom = mappedIDDict[preAtom]
+        postAtomType = postAtomObjectDict[pairAtom].atomType
+
+        if preAtomType != postAtomType:
+            return True
+        else:
+            return False
+
+    # Check for atom type changes too close to edge atoms
+    extendDistanceDict = {}
+    for preEdgeAtom in list(preEdgeAtomDict.keys()):
+        # Edge atom
+        stopSearch = compare_atom_type(preEdgeAtom)
+
+        if stopSearch:
+            extendDistanceDict[preEdgeAtom] = 3
+            continue
+
+        # First neighbours
+        preEdgeAtomObject = preAtomObjectDict[preEdgeAtom]
+        for firstNeighbour in preEdgeAtomObject.firstNeighbourIDs:
+            
+            stopSearch = compare_atom_type(firstNeighbour)
+            
+            if stopSearch:
+                extendDistanceDict[preEdgeAtom] = 2
+                break
+
+        # Second neighbours
+        if stopSearch: continue # Prevents second neighbours running and overwriting the result from first neighbours
+        for secondNeighbour in preEdgeAtomObject.secondNeighbourIDs:
+            stopSearch = compare_atom_type(secondNeighbour)
+            
+            if stopSearch:
+                extendDistanceDict[preEdgeAtom] = 1
+                break
+
+        # If no extension required
+        if stopSearch == False:
+            extendDistanceDict[preEdgeAtom] = 0
+
+    return extendDistanceDict
+
 def output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
     # Bonding atoms
     bondingAtoms = [['BondingIDs', '\n']]
@@ -477,7 +510,7 @@ def output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
 
     return output
 
-def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
+def map_from_path(directory, preFileName, postFileName, elementsByType, debug, mappedIDList = []):
     # Set log level
     if debug:
         logging.basicConfig(level='DEBUG')
@@ -491,11 +524,11 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     elementDictList = [preElementDict, postElementDict]
 
     # Generate atom class objects list
-    preAtomObjectList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms = build_atom_objects(preFileName, preElementDict)
-    postAtomObjectList, postBondingAtoms, postEdgeAtomDict, postDeleteAtoms = build_atom_objects(postFileName, postElementDict)
+    preAtomObjectDict, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms = build_atom_objects(preFileName, preElementDict)
+    postAtomObjectDict, postBondingAtoms, postEdgeAtomDict, postDeleteAtoms = build_atom_objects(postFileName, postElementDict)
 
     # Initialise lists
-    mappedIDList = []
+    # mappedIDList = []
     missingPreAtomList = []
     missingPostAtomList = []
 
@@ -503,16 +536,16 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     queue = Queue()
 
     # Populate queue with bonding atoms and update mappedIDList
-    queue_bond_atoms(preAtomObjectList, preBondingAtoms, postAtomObjectList, postBondingAtoms, mappedIDList, queue)
+    queue_bond_atoms(preAtomObjectDict, preBondingAtoms, postAtomObjectDict, postBondingAtoms, mappedIDList, queue)
 
     # Populate queue with unique edge atoms if present
-    queue_edge_atoms(preAtomObjectList, preEdgeAtomDict, postAtomObjectList, postEdgeAtomDict, mappedIDList, queue)
+    queue_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, postEdgeAtomDict, mappedIDList, queue)
 
     # Add delete atoms to the mappedIDList
     map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList)
 
     # Search through queue creating new maps based on all elements in a given path
-    run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
+    run_queue(queue, mappedIDList, preAtomObjectDict, postAtomObjectDict, missingPreAtomList, missingPostAtomList, elementDictList)
 
     # Update missingPreAtoms to check if the missing atom search loop is needed
     missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
@@ -525,16 +558,16 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
         missingPostAtomList = update_missing_list(missingPostAtomList, mappedIDList, 1)
 
         # Get pre atom objects
-        missingPreAtomObjects = get_missing_atom_objects(missingPreAtomList, preAtomObjectList)
+        missingPreAtomObjects = get_missing_atom_objects(missingPreAtomList, preAtomObjectDict)
 
         # Add any post atoms that aren't in the map or already in the missing atoms
         mappedPostAtoms = [pair[1] for pair in mappedIDList]
-        totalPostAtomList = [postAtom.atomID for postAtom in postAtomObjectList]
+        totalPostAtomList = list(postAtomObjectDict.keys())
         unfoundMissingPostAtoms = [atomID for atomID in totalPostAtomList if atomID not in mappedPostAtoms and atomID not in missingPostAtomList]
         missingPostAtomList.extend(unfoundMissingPostAtoms)
 
         # Get post atom objects
-        missingPostAtomObjects = get_missing_atom_objects(missingPostAtomList, postAtomObjectList)
+        missingPostAtomObjects = get_missing_atom_objects(missingPostAtomList, postAtomObjectDict)
 
         map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue)
 
@@ -543,18 +576,29 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
         missingPostAtomList = update_missing_list(missingPostAtomList, mappedIDList, 1)
 
         # Rerun the queue based on atom pairs added to queue from missingAtoms
-        run_queue(queue, mappedIDList, preAtomObjectList, postAtomObjectList, missingPreAtomList, missingPostAtomList, elementDictList)
+        run_queue(queue, mappedIDList, preAtomObjectDict, postAtomObjectDict, missingPreAtomList, missingPostAtomList, elementDictList)
         logging.debug(f'missingPreAtoms after loop {timeoutCounter}: {missingPreAtomList}') 
 
         timeoutCounter += 1
 
-    # Order mappedIDList by preAtomID
-    mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
+    if preEdgeAtomDict is not None:
+        extendDistanceDict = verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, mappedIDList)
+    else:
+        extendDistanceDict = {'Dummy': 0}
+    print(f'Extended Distance: {extendDistanceDict}')
 
-    outputData = output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms)
-    save_text_file('automap.data', outputData)
+    # If edge atoms don't need to be extended, output map
+    if list(extendDistanceDict.values()).count(0) == len(extendDistanceDict):
+        # Order mappedIDList by preAtomID
+        mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
 
-    return mappedIDList
+        outputData = output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms)
+        save_text_file('automap.data', outputData)
+
+        return mappedIDList
+    else:
+        print('UH OH EDGE TOO CLOSE')
+        return mappedIDList, extendDistanceDict
 
 # Validation Checks:
 # No repeated IDs / No IDs unassigned

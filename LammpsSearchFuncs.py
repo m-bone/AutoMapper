@@ -110,9 +110,13 @@ def search_loop(bonds, bondAtom):
     
     return nextBondAtomList
         
-def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3):
+def find_partial_structure(bondingAtoms, originalBondList, deleteAtoms, bondDistance=3):
     # Find bonds within a specified distance of the bonding atoms
     
+    # Convert bondingAtoms to list if string given
+    if type(bondingAtoms) == str:
+        bondingAtoms = [bondingAtoms]
+
     # Add delete atoms to valid atoms if present
     initialValidAtoms = bondingAtoms.copy()
     if deleteAtoms is not None:
@@ -128,14 +132,14 @@ def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistanc
         
         i = 1
         while i <= bondDistance:
-            newBondAtomList = search_loop(originalBonds, newBondAtomList)
+            newBondAtomList = search_loop(originalBondList, newBondAtomList)
             if i == 1: # First pass - Stop search from finding other bonding atom if they are bound together
                 newBondAtomList = [val for val in newBondAtomList if val not in bondingAtoms]
 
             if i < bondDistance: # Before bond distance is reached
                 # Add list as individual elements 
                 for atom in newBondAtomList:
-                    validAtomSet.add(atom)
+                    validAtomSet.add(atom) 
 
             else: # Once bond distance is reached
                 # Determine which of the last obtained atom IDs have further bonds               
@@ -149,7 +153,7 @@ def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistanc
                 # Run another loop to determine if possibleEdgeAtoms have other bonds
                 for searchAtom in possibleEdgeAtoms:
                     bondCount = 0
-                    for bond in originalBonds:
+                    for bond in originalBondList:
                         nextAtomID = pair_search(bond, searchAtom)
                         if nextAtomID is not None:
                             bondCount += 1
@@ -159,8 +163,11 @@ def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistanc
             # Increment iterator
             i += 1
 
+    return validAtomSet, edgeAtomList
+
+def edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet):
     # Get edge atom neighbours
-    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBonds)
+    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBondList)
     
     # Filter out validAtomIDs that are within the partial structure
     filteredFingerprintDict = {}
@@ -168,7 +175,25 @@ def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistanc
         cutList = [atom for atom in atomList if atom not in validAtomSet]
         filteredFingerprintDict[key] = cutList
 
-    return validAtomSet, edgeAtomList, filteredFingerprintDict
+    return filteredFingerprintDict
+
+def extend_edge_atoms(extendEdgeAtomDict, originalBondList, validAtomSet):
+    totalExtendedEdgeAtomList = []
+    for atom, bondDist in extendEdgeAtomDict.items():
+        # Shortcircuit this if bondDist is 0 - means the current edge atom is fine
+        if bondDist == 0:
+            totalExtendedEdgeAtomList.append(atom)
+
+        # Find partial structure will work with a single edge atom
+        extendedValidAtomSet, extendedEdgeAtomList = find_partial_structure(atom, originalBondList, None, bondDistance=bondDist)
+        
+        # Remove edge atoms that already existed in the validAtomSet - these will be atoms closer to the original bonding atoms
+        extendedEdgeAtomList = [val for val in extendedEdgeAtomList if val not in validAtomSet]
+        validAtomSet.update(extendedValidAtomSet)
+        totalExtendedEdgeAtomList.extend(extendedEdgeAtomList)
+
+    return validAtomSet, totalExtendedEdgeAtomList
+
 
 def get_neighbours(atomIDList, bondsList):
     '''Get atomIDs of neighbouring atoms for each atom in atomIDList'''

@@ -171,8 +171,9 @@ def file_unifier(directory, coeffsFile, dataList):
         types = natsorted(set().union(*lammpsTypes))
         numTypes = str(len(types))
         
-        print(f'{typeAttr}\n Types: {types}\n Count: {numTypes}')
-
+        # Print number of types changed
+        # print(f'{typeAttr}\n Types: {types}\n Count: {numTypes}') 
+        
         return types, numTypes
 
     # Union sets and create sorted list for each type
