@@ -25,7 +25,7 @@ from natsort import natsorted
 from collections import Counter, deque
 
 from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, get_neighbours, get_additional_neighbours, element_atomID_dict
-from LammpsTreatmentFuncs import clean_data, save_text_file
+from LammpsTreatmentFuncs import clean_data
 
 # Classes and functions for search
 class Queue:
@@ -43,8 +43,6 @@ class Queue:
         return self.elements.popleft()
 
 def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outputType):
-    # Edge atom comparison
-
     # Neighbour comparison - no inference
     def compare_neighbours(neighbourLevel):
         neighbourComparison = [getattr(atomObject, neighbourLevel) for atomObject in postNeighbourAtomObjectList]
@@ -70,26 +68,51 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
 
     # Second neighbour comparison
     if symmetryResult is None:
-        compare_neighbours('secondNeighbourElements')
+        symmetryResult = compare_neighbours('secondNeighbourElements')
 
     # Third neighbour comparison
     if symmetryResult is None:
-        compare_neighbours('thirdNeighbourElements')
+        symmetryResult = compare_neighbours('thirdNeighbourElements')
+
+    # Edge atom comparison
+    if symmetryResult is None:
+        if preNeighbourAtom.edgeAtom is not None:
+            edgeFingerprints = [atomObject.edgeAtom for atomObject in postNeighbourAtomObjectList]
+            
+            countEdgeFingerprints = Counter(edgeFingerprints)
+            tuppledEdgeFingerprints = [(index, fingerprint) for index, fingerprint in enumerate(edgeFingerprints) if countEdgeFingerprints[fingerprint] == 1]
+
+            for index, fingerprint in tuppledEdgeFingerprints:
+                if preNeighbourAtom.edgeAtom == fingerprint:
+                    logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {postNeighbourAtomObjectList[index].atomID} found with edge atom symmetry')
+                    if outputType == 'index':
+                        symmetryResult = index
+                    elif outputType == 'atomID':
+                        symmetryResult = postNeighbourAtomObjectList[index].atomID
+                    else:
+                        print('Invalid output type specified for compare_symmetric_atoms')
 
     # If it makes it through all these, guess assignment and warn user about this
     if symmetryResult is not None:
         return symmetryResult
     else:
+        # Find all potential choices by breaking the postNeighbourAtomList down into atoms that match the preAtom element
+        possibleChoices = []
         for index, postNeighbourAtom in enumerate(postNeighbourAtomObjectList):
             if postNeighbourAtom.element == preNeighbourAtom.element:
-                logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {postNeighbourAtom.atomID} found with symmetry inference')
-                print(f'Note: Pre-bond atomID {preNeighbourAtom.atomID} has been assigned by inference to post-bond atomID {postNeighbourAtom.atomID}. Please check this is correct.')
-                if outputType == 'index':
-                        return index
-                elif outputType == 'atomID':
-                    return postNeighbourAtom.atomID
-                else:
-                    print('Invalid output type specified for compare_symmetric_atoms')
+                possibleChoices.append((index, postNeighbourAtom.atomID))
+
+        # Let the user know that an inference has been made     
+        logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {possibleChoices[0][1]} found with symmetry inference')
+        print(
+            f'Note: Pre-bond atomID {preNeighbourAtom.atomID} has been assigned by inference to post-bond atomID {possibleChoices[0][1]}. The potential choices were {[atom[1] for atom in possibleChoices]}. Please check this is correct.'
+        )
+        if outputType == 'index':
+                return possibleChoices[0][0]
+        elif outputType == 'atomID':
+            return possibleChoices[0][1]
+        else:
+            print('Invalid output type specified for compare_symmetric_atoms')
 
 
 class Atom():
@@ -377,19 +400,19 @@ def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDLis
             elif elementOccurence == 1:
                 postIndex = missingPostAtomElements.index(preAtom.element)
                 logging.debug(f'Pre: {preAtom.atomID}, Post: {missingPostAtomObjects[postIndex].atomID} found with missing atoms single element occurence')
-                matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
                 
             elif elementOccurence > 1:
                 if preAtom.element == 'H':
                     postHydrogenIndexList = [index for index, element in enumerate(missingPostAtomElements) if element == 'H']
                     postIndex = postHydrogenIndexList.pop()
                     logging.debug(f'Pre: {preAtom.atomID}, Post: {missingPostAtomObjects[postIndex].atomID} found with missing atoms hydrogen symmetry inference')
-                    matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                    match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
                 else:
                     potentialPostAtomObjects = [atomObject for atomObject in missingPostAtomObjects if atomObject.element == preAtom.element]
                     postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index')
                     if postIndex is not None:
-                        matchMissing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                        match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
                         logging.debug(f'The above atomID pair was found with missing atoms symmetry comparison')                                    
 
         # Refresh missingPreAtomObjects so that it doesn't print needless error messages on subsequent loops
@@ -398,7 +421,7 @@ def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDLis
         
         missingCheckCounter += 1
 
-def matchMissing(preAtom, postAtomMissingIndex, missingPostAtomObjects, mapList, queue, preIndex, mappedPreAtomIndex):
+def match_missing(preAtom, postAtomMissingIndex, missingPostAtomObjects, mapList, queue, preIndex, mappedPreAtomIndex):
     # Get post atom
     postAtom = missingPostAtomObjects[postAtomMissingIndex]
 
@@ -467,50 +490,7 @@ def verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, ma
 
     return extendDistanceDict
 
-def output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
-    # Bonding atoms
-    bondingAtoms = [['BondingIDs', '\n']]
-    for atom in preBondingAtoms:
-        bondingAtoms.extend([[atom]])
-    bondingAtoms.extend(['\n'])
-
-    # Delete Atoms
-    deleteIDCount = []
-    deleteAtoms = []
-    if preDeleteAtoms is not None:
-        deleteIDCount.extend([[str(len(preDeleteAtoms)) + ' deleteIDs']])
-        deleteAtoms.extend([['DeleteIDs', '\n']])
-        for atom in preDeleteAtoms:
-            deleteAtoms.extend([[atom]])
-        deleteAtoms.extend(['\n'])
-
-    # Edge Atoms
-    edgeIDCount = []
-    edgeAtoms = []
-    if preEdgeAtomDict is not None:
-        edgeIDCount.extend([[str(len(preEdgeAtomDict)) + ' edgeIDs']])
-        edgeAtoms.extend([['EdgeIDs', '\n']])
-        for atom in preEdgeAtomDict.keys():
-            edgeAtoms.extend([[atom]])
-        edgeAtoms.extend(['\n'])
-    edgeIDCount.extend('\n')
-
-    # Equivalences
-    equivalences = [['#This is an AutoMapper generated map\n'], [str(len(mappedIDList)) + ' equivalences']]
-    equivalenceAtoms = [['Equivalences', '\n']]
-    for atomPair in mappedIDList:
-        equivalenceAtoms.extend([[atomPair[0] + '\t' + atomPair[1]]])
-
-    # Output data
-    output = []
-    totalOutput = [equivalences, deleteIDCount, edgeIDCount, bondingAtoms, deleteAtoms, edgeAtoms, equivalenceAtoms]
-
-    for section in totalOutput:
-        output.extend(section)
-
-    return output
-
-def map_from_path(directory, preFileName, postFileName, elementsByType, debug, mappedIDList = []):
+def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     # Set log level
     if debug:
         logging.basicConfig(level='DEBUG')
@@ -527,10 +507,13 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug, m
     preAtomObjectDict, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms = build_atom_objects(preFileName, preElementDict)
     postAtomObjectDict, postBondingAtoms, postEdgeAtomDict, postDeleteAtoms = build_atom_objects(postFileName, postElementDict)
 
+    # Assert the same number of atoms are in pre and post - maps have the same number of atoms in
+    assert len(preAtomObjectDict) == len(postAtomObjectDict), f'Different numbers of atoms in pre- and post-bond files. Pre: {len(preAtomObjectDict)}, Post: {len(postAtomObjectDict)}'
+
     # Initialise lists
-    # mappedIDList = []
     missingPreAtomList = []
     missingPostAtomList = []
+    mappedIDList = []
 
     # Initialise queue
     queue = Queue()
@@ -585,22 +568,6 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug, m
         extendDistanceDict = verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, mappedIDList)
     else:
         extendDistanceDict = {'Dummy': 0}
-    print(f'Extended Distance: {extendDistanceDict}')
+    logging.debug(f'Extended Distance: {extendDistanceDict}')
 
-    # If edge atoms don't need to be extended, output map
-    if list(extendDistanceDict.values()).count(0) == len(extendDistanceDict):
-        # Order mappedIDList by preAtomID
-        mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
-
-        outputData = output_path(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms)
-        save_text_file('automap.data', outputData)
-
-        return mappedIDList
-    else:
-        print('UH OH EDGE TOO CLOSE')
-        return mappedIDList, extendDistanceDict
-
-# Validation Checks:
-# No repeated IDs / No IDs unassigned
-# Ambiguous groups maintained pre and post aside from moved atoms
-# Check that atom assigned from missingatoms is bound to the atoms that it expects to be bound to
+    return mappedIDList, extendDistanceDict, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms

@@ -143,6 +143,6 @@ def lammps_to_molecule_partial(directory, fileName, saveName, elementsByType, bo
         outputList.extend(keyword)
         
     # Output as text file
-    save_text_file(saveName + 'molecule.data', outputList)
+    save_text_file(saveName, outputList)
 
     return renumberedAtomIDDict

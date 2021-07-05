@@ -16,6 +16,7 @@
 # These functions work for 'read_data' files and 'molecule' files
 ##############################################################################
 import re
+from collections import Counter
 from LammpsTreatmentFuncs import clean_data
 
 # Get data
