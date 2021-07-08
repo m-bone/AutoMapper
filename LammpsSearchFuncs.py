@@ -168,7 +168,7 @@ def find_partial_structure(bondingAtoms, originalBondList, deleteAtoms, bondDist
 
 def edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet):
     # Get edge atom neighbours
-    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBondList)
+    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBondList, []) # Bonding atoms given as blank list, edge atoms can never have bonding atoms as a neighbour so not a problem
     
     # Filter out validAtomIDs that are within the partial structure
     filteredFingerprintDict = {}
@@ -196,8 +196,13 @@ def extend_edge_atoms(extendEdgeAtomDict, originalBondList, validAtomSet):
     return validAtomSet, totalExtendedEdgeAtomList
 
 
-def get_neighbours(atomIDList, bondsList):
-    '''Get atomIDs of neighbouring atoms for each atom in atomIDList'''
+def get_neighbours(atomIDList, bondsList, newBondAtoms):
+    '''
+    Get atomIDs of neighbouring atoms for each atom in atomIDList
+
+    Bonding atoms don't appear as neighbours as this is used for symmetry checks.
+    Bonding atoms always will have different neighbour fingerprints so no point looking at them.
+    '''
     boundAtomsList = []
 
     # Determine what atoms are bound to an initial atom
@@ -205,7 +210,7 @@ def get_neighbours(atomIDList, bondsList):
         bondingAtoms = []
         for bond in bondsList:
             pairResult = pair_search(bond, atom)
-            if pairResult is not None:
+            if pairResult is not None and pairResult not in newBondAtoms: # Stops bonding atoms appearing as neighbours
                 bondingAtoms.append(pairResult)
 
         boundAtomsList.append([atom, bondingAtoms])
@@ -215,7 +220,7 @@ def get_neighbours(atomIDList, bondsList):
 
     return boundAtomsDict
 
-def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, unique=True):
+def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, bondingAtoms, unique=True):
     ''' Get atomIDs of the neighbours of a given atomID.     
 
         This is designed to get second and third neighbours of a given atomID. Further away
@@ -237,6 +242,11 @@ def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, un
         # Remove the original search atomID from totalNeighbourSet if present
         if searchAtomID in totalNeighbourSet:
             totalNeighbourSet.remove(searchAtomID)
+
+        # Remove bonding atoms - don't want to use bonding atom fingerprints as they will always be different pre and post
+        for bondingAtom in bondingAtoms:
+            if bondingAtom in totalNeighbourSet:
+                totalNeighbourSet.remove(bondingAtom)
 
         # Remove the neighbours from this search
         for currentNeighbour in searchNeighbours:

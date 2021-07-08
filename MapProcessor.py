@@ -56,7 +56,6 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
         revertedExtendPreEdgeAtomDict = revert_id_numbering(extendPreEdgeAtomDict, preRenumberedAtomIDDict)
         revertedExtendPostEdgeAtomDict = revert_id_numbering(extendPostEdgeAtomDict, postRenumberedAtomIDDict)
 
-
         with restore_dir():
             preRenumberedAtomIDDict = lammps_to_molecule_partial(directory, preDataFileName, preMoleculeFileName, elementsByType, preBondingAtoms, extendEdgeAtomsDict=revertedExtendPreEdgeAtomDict)
         

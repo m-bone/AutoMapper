@@ -54,7 +54,7 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
 
         # Any of the potential post neighbours matches the pre atom fingerprint, return the post neighbour
         for index, fingerprint in tuppledFingerprints:
-            if ''.join(getattr(preNeighbourAtom, neighbourLevel)) == fingerprint:
+            if ''.join(sorted(getattr(preNeighbourAtom, neighbourLevel))) == fingerprint:
                 logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {postNeighbourAtomObjectList[index].atomID} found with {neighbourLevel}')
                 if outputType == 'index':
                     return index
@@ -276,7 +276,7 @@ def build_atom_objects(fileName, elementDict):
         edgeAtoms = [] # Empty list passes later 'in' check
 
     # Build neighbours dict
-    neighboursDict = get_neighbours(atomIDs, bonds)
+    neighboursDict = get_neighbours(atomIDs, bonds, bondingAtoms)
 
     def get_elements(neighbourIDs, elementDict):
         return [elementDict[atomID]for atomID in neighbourIDs]
@@ -285,8 +285,8 @@ def build_atom_objects(fileName, elementDict):
     for index, atomID in enumerate(atomIDs):
         atomType = types[index][1]
         neighbours = neighboursDict[atomID]
-        secondNeighbours = get_additional_neighbours(neighboursDict, atomID, neighbours)
-        thirdNeighbours = get_additional_neighbours(neighboursDict, atomID, secondNeighbours)
+        secondNeighbours = get_additional_neighbours(neighboursDict, atomID, neighbours, bondingAtoms)
+        thirdNeighbours = get_additional_neighbours(neighboursDict, atomID, secondNeighbours, bondingAtoms)
 
         neighbourElements = get_elements(neighbours, elementDict)
         secondNeighbourElements = get_elements(secondNeighbours, elementDict)
@@ -326,7 +326,6 @@ def queue_bond_atoms(preAtomObjectDict, preBondingAtoms, postAtomObjectDict, pos
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preBondAtom, postBondingAtoms[index]])
         logging.debug(f'Pre: {preBondAtom}, Post: {postBondingAtoms[index]} found with user specified bond atom')
-
 
 def queue_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, postEdgeAtomDict, mappedIDList, queue):
     # Skip function call if no edge atoms present

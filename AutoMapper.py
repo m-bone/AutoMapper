@@ -57,7 +57,7 @@ if tool == 'molecule' and (args.save_name is None or args.ba is None):
 if 'partial' in tool and (args.save_name is None or args.ba is None or args.ebt is None):
     parser.error('"molecule-partial" or "lammps-partial" tools require --save_name, --ba (bonding atoms) and --ebt (elements by type) arguments')
 
-if tool != 'clean' and tool != 'map' and len(args.data_files) > 1:
+if tool != 'clean' and tool != 'map' and tool != 'map-only' and len(args.data_files) > 1:
     parser.error('This tool can only take 1 data_file as input')
 
 if 'map' in tool and (len(args.data_files) != 2 or args.ebt is None):

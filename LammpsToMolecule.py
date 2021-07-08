@@ -106,5 +106,5 @@ def lammps_to_molecule(directory, fileName, saveName, bondingAtoms: list, delete
         outputList.extend(keyword)
         
     # Output as text file
-    save_text_file(saveName + 'molecule.data', outputList)
+    save_text_file(saveName, outputList)
 

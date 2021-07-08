@@ -306,3 +306,50 @@ correctQTest = {
 
 }
 test_report(qtMappedIDList, correctQTest, 'Edge Atom Symmetry')
+
+# Third Neighbour Symmetry
+# Should determine atoms 8 and 11 by third neighbours, not inference
+with restore_dir():
+    tnMappedIDList, _, _, _, _ = map_from_path(
+        'Test_Cases/Map_Tests/Third_Neighbour_Symmetry/', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+    )
+
+correctTNTest = {
+    '1': ['1'],
+    '2': ['33'],
+    '3': ['3', '4'],
+    '4': ['3', '4'],
+    '5': ['5'],
+    '6': ['6', '32'],
+    '7': ['35'],
+    '8': ['8'],
+    '9': ['9', '10'],
+    '10': ['9', '10'],
+    '11': ['11', '10'],
+    '12': ['12'],
+    '13': ['13'],
+    '14': ['14'],
+    '15': ['2', '7', '34'],
+    '16': ['2', '7', '34'],
+    '17': ['2', '7', '34'],
+    '18': ['18'],
+    '19': ['19'],
+    '20': ['20'],
+    '21': ['21', '22'],
+    '22': ['21', '22'],
+    '23': ['23'],
+    '24': ['24', '25', '27'],
+    '25': ['24', '25', '27'],
+    '26': ['26'],
+    '27': ['24', '25', '27'],
+    '28': ['28', '29'],
+    '29': ['28', '29'],
+    '30': ['30'],
+    '31': ['31'],
+    '32': ['6', '32'],
+    '33': ['15'],
+    '34': ['16', '17'],
+    '35': ['16', '17'],
+
+}
+test_report(tnMappedIDList, correctTNTest, 'Edge Atom Symmetry')
