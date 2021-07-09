@@ -61,3 +61,4 @@ z1 z2 zlo zhi
 ## Limitations
 Any byproducts created by the reaction (e.g. a water molecule) must be specified as delete atoms with the `--da` argument if using the `-partial` tools. Use the `molecule` tool if you don't wish to do this.
 Further testing of more complicated molecules to come.
+A core assumption for the path search is that hydrogen atoms don't have only one bond. Results mapping diborane style molecules may vary.

@@ -210,7 +210,7 @@ def get_neighbours(atomIDList, bondsList, newBondAtoms):
         bondingAtoms = []
         for bond in bondsList:
             pairResult = pair_search(bond, atom)
-            if pairResult is not None and pairResult not in newBondAtoms: # Stops bonding atoms appearing as neighbours
+            if pairResult is not None: # Stops bonding atoms appearing as neighbours CODE - and pairResult not in newBondAtoms
                 bondingAtoms.append(pairResult)
 
         boundAtomsList.append([atom, bondingAtoms])
@@ -277,7 +277,7 @@ def element_atomID_dict(fileName, elementsByType):
         types = [[atomRow[0], atomRow[2]] for atomRow in atoms]
     typesDict = {row[0]: row[1] for row in types} # Keys: ID, Val: Type
 
-    # Ensure elementsByTypes is uppercase
+    # Ensure elementsByType is uppercase
     elementsByTypeDict = {index+1: val.upper() for index, val in enumerate(elementsByType)} # Keys: Type, Val: Elements
 
     elementIDDict = {key: elementsByTypeDict[int(val)] for key, val in typesDict.items()}
