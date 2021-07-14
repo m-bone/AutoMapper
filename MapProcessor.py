@@ -1,12 +1,10 @@
-from collections import deque
-from copy import deepcopy
 import os
 import contextlib
 from natsort import natsorted
+from copy import deepcopy
 
 from PathSearch import map_from_path
 from LammpsToMolecule import lammps_to_molecule
-from LammpsToMoleculePartial import lammps_to_molecule_partial
 from LammpsTreatmentFuncs import save_text_file
 from LammpsSearchFuncs import element_atomID_dict
 from AtomObjectBuilder import build_atom_objects
@@ -46,30 +44,51 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
     prePreservedAtomIDs = is_cyclic(preAtomObjectDict, preBondingAtoms)
     postPreservedAtomIDs = is_cyclic(postAtomObjectDict, postBondingAtoms)
     
-    def is_ring_opening(prePreservedAtomIDs, postPreservedAtomIDs, mappedIDList):
-        '''Determine if a reaction is a ring opening polymerisation'''
-        def find_mapped_pair(preAtom):
-            for pair in mappedIDList:
-                if pair[0] == preAtom:
-                    return pair[1]
+    # Determine atoms to be kept if reaction is a ring opening
+    prePartialAtomsSet, postPartialAtomsSet = is_ring_opening(prePreservedAtomIDs, postPreservedAtomIDs, mappedIDList)
 
-        for preBondingAtom, prePreservedIDSet in prePreservedAtomIDs.items():
-            
-            # If preBondingAtom is cyclic, get the post bonding atom
-            if prePreservedIDSet is not None:
-                postBondingAtom = find_mapped_pair(preBondingAtom)
+    # Keep atoms up to 4 bonds away from the bonding atoms
+    prePartialAtomsSet = keep_all_neighbours(preAtomObjectDict, preBondingAtoms, prePartialAtomsSet)
+    postPartialAtomsSet = keep_all_neighbours(postAtomObjectDict, postBondingAtoms, postPartialAtomsSet)
 
-                # If post bonding atom is not cyclic, ring opening polymerisation is presumed
-                if postPreservedAtomIDs[postBondingAtom] is None:
-                    print('ITS A RING OPENER!')
-                    # Return needs to be cut of dict with bondingAtom keys and set values
+    # Keep delete atoms - IMPROVEMENT: Need to detect byproducts that are not deleted
+    if preDeleteAtoms is not None:
+        prePartialAtomsSet.update(preDeleteAtoms)
+        postPartialAtomsSet.update(postDeleteAtoms)
 
-    is_ring_opening(prePreservedAtomIDs, postPreservedAtomIDs, mappedIDList)
+    # Find pre-bond edge atoms
+    preEdgeAtoms = find_edge_atoms(preAtomObjectDict, prePartialAtomsSet)
+
+    # Order mappedIDList by preAtomID
+    mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
+
+    # Renumber map if the partial structure has a different length to the full structure
+    # If they're equal then just output the map, no changes needed
+    if len(prePartialAtomsSet) != len(preAtomObjectDict):
+        # Build a partial map and get the renumbering dictionaries
+        mappedIDList, preRenumberdAtomDict, postRenumberedAtomDict = create_partial_map(mappedIDList, prePartialAtomsSet, postPartialAtomsSet)
+
+        # Renumber key features for molecule creation and output
+        preBondingAtoms = renumber(preBondingAtoms, preRenumberdAtomDict)
+        preDeleteAtoms = renumber(preDeleteAtoms, preRenumberdAtomDict)
+
+        postBondingAtoms = renumber(postBondingAtoms, postRenumberedAtomDict)
+        postDeleteAtoms = renumber(postDeleteAtoms, postRenumberedAtomDict)
+
+        # Rebuild molecule files with partial structure
+        with restore_dir():
+            lammps_to_molecule(directory, preDataFileName, preMoleculeFileName, preBondingAtoms, deleteAtoms=preDeleteAtoms, validIDSet=prePartialAtomsSet, renumberedAtomDict=preRenumberdAtomDict)
+
+        with restore_dir():
+            lammps_to_molecule(directory, postDataFileName, postMoleculeFileName, postBondingAtoms, deleteAtoms=postDeleteAtoms, validIDSet=postPartialAtomsSet, renumberedAtomDict=postRenumberedAtomDict)
+
+    # Output the map file
+    save_output(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms)
 
     # Returns mappedIDList for other functions to use e.g. testing
-    # return mappedIDList
+    return mappedIDList
 
-def output_map(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
+def output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms):
     # Bonding atoms
     bondingAtoms = [['BondingIDs', '\n']]
     for atom in preBondingAtoms:
@@ -89,10 +108,10 @@ def output_map(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
     # Edge Atoms
     edgeIDCount = []
     edgeAtoms = []
-    if preEdgeAtomDict is not None:
-        edgeIDCount.extend([[str(len(preEdgeAtomDict)) + ' edgeIDs']])
+    if preEdgeAtoms is not None:
+        edgeIDCount.extend([[str(len(preEdgeAtoms)) + ' edgeIDs']])
         edgeAtoms.extend([['EdgeIDs', '\n']])
-        for atom in preEdgeAtomDict.keys():
+        for atom in preEdgeAtoms:
             edgeAtoms.extend([[atom]])
         edgeAtoms.extend(['\n'])
     edgeIDCount.extend('\n')
@@ -113,9 +132,6 @@ def output_map(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
     return output
 
 def save_output(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms):
-    # Order mappedIDList by preAtomID
-    mappedIDList = natsorted(mappedIDList, key=lambda x: x[0])
-
     # Save data
     outputData = output_map(mappedIDList, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms)
     save_text_file('automap.data', outputData)
@@ -202,6 +218,120 @@ def is_cyclic(atomObjectDict, bondingAtoms):
 
         return preservedAtomIDs  
 
+def is_ring_opening(prePreservedAtomIDs, postPreservedAtomIDs, mappedIDList):
+        '''
+        Determine if a reaction is a ring opening polymerisation.
+        Return two dicts of bonding atoms keys and preserved atom sets.
+        '''
+        def find_mapped_pair(preAtom):
+            for pair in mappedIDList:
+                if pair[0] == preAtom:
+                    return pair[1]
+
+        # Init dicts for storing rings
+        preCyclicAtomsSet = set()
+        postCyclicAtomsSet = set()
+
+        for preBondingAtom, prePreservedIDSet in prePreservedAtomIDs.items():
+            
+            # If preBondingAtom is cyclic (not None), get the post bonding atom
+            if prePreservedIDSet is not None:
+                postBondingAtom = find_mapped_pair(preBondingAtom)
+
+                # If post bonding atom is not cyclic, ring opening polymerisation is presumed
+                if postPreservedAtomIDs[postBondingAtom] is None:
+                    print('ITS A RING OPENER!')
+
+                    # Store pre bond data
+                    preCyclicAtomsSet.add(preBondingAtom)
+                    preCyclicAtomsSet.update(prePreservedIDSet)
+
+                    # Get post bond data from map and store
+                    # This is done as the postPreservedAtomsIDs for a ring opening reaction will be None
+                    postCyclicAtomsSet.add(postBondingAtom)
+                    for preCyclicAtom in prePreservedIDSet:
+                        postCyclicAtom = find_mapped_pair(preCyclicAtom)
+                        postCyclicAtomsSet.add(postCyclicAtom)
+
+        return preCyclicAtomsSet, postCyclicAtomsSet
+
+def keep_all_neighbours(atomObjectDict, bondingAtoms, partialAtomSet):
+    for bondingAtom in bondingAtoms:
+        # Add bonding atom to the set in case it isn't there already
+        partialAtomSet.add(bondingAtom)
+
+        # Get atom object
+        atomObject = atomObjectDict[bondingAtom]
+
+        # Add neighbourIDs to the partial set
+        partialAtomSet.update(atomObject.firstNeighbourIDs)
+        partialAtomSet.update(atomObject.secondNeighbourIDs)
+        partialAtomSet.update(atomObject.thirdNeighbourIDs)
+
+    return partialAtomSet
+
+def create_partial_map(mappedIDList, prePartialAtomsSet, postPartialAtomsSet):
+            # Remove all the IDs that aren't in the pre and post partial atom sets
+            partialMappedIDList = []
+            for pair in mappedIDList:
+                if pair[0] in prePartialAtomsSet and pair[1] in postPartialAtomsSet:
+                    partialMappedIDList.append(pair)
+                
+                # If something is present one set it must be present in the other set
+                if pair[0] in prePartialAtomsSet and pair[1] not in postPartialAtomsSet:
+                    print(f'Warning: Pre atom {pair[0]} is present but post atom {pair[1]} missing')
+                if pair[1] in prePartialAtomsSet and pair[0] not in postPartialAtomsSet:
+                    print(f'Warning: Pre atom {pair[1]} is present but post atom {pair[0]} missing')
+
+                # Debug tools
+                # if pair[0] not in prePartialAtomsSet:
+                #     print(f'Pre atom {pair[0]} not in partial atoms')
+                # if pair[1] not in postPartialAtomsSet:
+                #     print(f'Post atom {pair[1]} not in partial atoms')
+
+            preRenumberedAtomDict = {}
+            postRenumberedAtomDict = {}
+            renumberedMappedIDList = []
+            # Simply renumber the pre and post atoms based on their position in the ID list
+            for index, pair in enumerate(partialMappedIDList, start=1):
+                preRenumberedAtomDict[pair[0]] = str(index)
+                postRenumberedAtomDict[pair[1]] = str(index)
+                renumberedMappedIDList.append([str(index), str(index)])
+
+            return renumberedMappedIDList, preRenumberedAtomDict, postRenumberedAtomDict
+
+def renumber(inputList, renumberedAtomDict):
+    '''
+    Take list of numbers and conversion dict as input.
+    Output list of converted numbers in same order. Return None if input is None
+    '''
+    if inputList is None:
+        return None
+
+    outputList = []
+    for value in inputList:
+        outputList.append(renumberedAtomDict[value])
+
+    return outputList
+
+def find_edge_atoms(atomObjectDict, partialAtomSet):
+    edgeAtoms = []
+    for atom in partialAtomSet:
+        # Skip H atoms as they can't be edge atoms
+        if atomObjectDict[atom].element == 'H':
+            continue
+        
+        # Iterate through first neighbours and check they're all in the partial atom set
+        for neighbour in atomObjectDict[atom].firstNeighbourIDs:
+            # If one neighbour is not in the partial atom set, atom must be an edge
+            if neighbour not in partialAtomSet:
+                edgeAtoms.append(atom)
+                break
+
+    if len(edgeAtoms) > 0:
+        return edgeAtoms
+    else: # If no edge atoms in molecule then other functions expect None
+        return None
 # InitialMappedIDList needs reverting to original number system and then converting to the new cutdown number system for the extended edge atom molecules
 # New error message for map and tidy/build this into AutoMapper main wrap function
 # Add edge atom symmetry test now that "Edge_Atom_Symmetry" test case is working
