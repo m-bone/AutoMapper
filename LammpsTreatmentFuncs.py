@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/06/2021
+# Last Updated: 30/07/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -92,9 +92,6 @@ def refine_data(data, searchIndex: list, IDset=None, newAtomIDs=None):
             # Stops duplicate IDs being refound in the future
             validIDIndex = validIDs.index(row[0])
             del validIDs[validIDIndex]
-
-    # Re-sort validData by ID, use natsort as values are str not int
-    validData = natsorted(validData, key=itemgetter(0))
     
     # If dict provided then use it to update the atom IDs from old to new
     for rowInd, row in enumerate(validData, start=1):
@@ -102,6 +99,9 @@ def refine_data(data, searchIndex: list, IDset=None, newAtomIDs=None):
             row[0] = str(rowInd) # Reset the LAMMPS ID e.g. bond number
         for index in searchIndex:
             row[index] = newAtomIDs[row[index]]
+
+    # Re-sort validData by ID, use natsort as values are str not int
+    validData = natsorted(validData, key=itemgetter(0))
 
     return validData
 

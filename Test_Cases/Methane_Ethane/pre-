@@ -1,4 +1,4 @@
-LAMMPS Description Bonding_Atoms  1 6 ['Delete_Atoms 5 10']
+LAMMPS Description Bonding_Atoms  1 6
 10 atoms
 8 bonds
 12 angles

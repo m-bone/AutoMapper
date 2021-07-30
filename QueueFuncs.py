@@ -1,6 +1,23 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 30/07/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# This is a collection of the queue control tools that facilitate the custom
+# path search used in mapping.
+##############################################################################
+
 import logging
-from natsort import natsorted
-from collections import Counter, deque
+from collections import deque
 
 # Classes and functions for search
 class Queue:
@@ -34,29 +51,6 @@ def queue_bond_atoms(preAtomObjectDict, preBondingAtoms, postAtomObjectDict, pos
         queue.add([[preAtomObject, postAtomObject]])
         mappedIDList.append([preBondAtom, postBondingAtoms[index]])
         logging.debug(f'Pre: {preBondAtom}, Post: {postBondingAtoms[index]} found with user specified bond atom')
-
-def queue_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, postEdgeAtomDict, mappedIDList, queue):
-    # Skip function call if no edge atoms present
-    if preEdgeAtomDict is None:
-        return
-
-    # Check edge atom fingerprints are the same
-    assert natsorted(list(preEdgeAtomDict.values())) == natsorted(list(postEdgeAtomDict.values())), 'Pre and post edge atom fingerprints do not match.'
-    
-    # Find unique fingerprints 
-    countEdgeAtomFingerprints = Counter(list(preEdgeAtomDict.values()))
-    uniqueEdgeAtomFingerprints = [fingerprint for fingerprint in preEdgeAtomDict.values() if countEdgeAtomFingerprints[fingerprint] == 1]
-    for fingerprint in uniqueEdgeAtomFingerprints:
-        # Find index of fingerprint values, then get key at that index
-        preEdgeAtomID = list(preEdgeAtomDict.keys())[list(preEdgeAtomDict.values()).index(fingerprint)]
-        postEdgeAtomID = list(postEdgeAtomDict.keys())[list(postEdgeAtomDict.values()).index(fingerprint)]
-        
-        preAtomObject = preAtomObjectDict[preEdgeAtomID]
-        postAtomObject = postAtomObjectDict[postEdgeAtomID]
-        
-        queue.add([[preAtomObject, postAtomObject]])
-        mappedIDList.append([preEdgeAtomID, postEdgeAtomID])
-        logging.debug(f'Pre: {preEdgeAtomID}, Post: {postEdgeAtomID} found with specified edge atom')
 
 def run_queue(queue, mappedIDList, preAtomObjectDict, postAtomObjectDict, missingPreAtomList, missingPostAtomList, elementDictList):
     while not queue.empty():

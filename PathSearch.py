@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/06/2021
+# Last Updated: 30/07/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -12,19 +12,18 @@
 # Email - matthew.bone@bristol.ac.uk
 #
 # File Description:
-# This is the core mapping code for solving molecule maps using a path search
-# approach. Requires two molecule files and a few user provided parameters.
-# Designed to work with molecule files created with LammpsToMolecule or 
-# LammpsToMoleculePartial as bonding, edge and delete atom values are scraped 
-# from the header of molecule files.
+# This is the primary mapping code that utilises a custom path search to
+# determine similar atoms in pre- and post-bond molecule files. This is only
+# called from MapProcessor; it can no longer be used to create a map independently.
 ##############################################################################
 
 import os
 import logging
+import sys
 
 from LammpsSearchFuncs import element_atomID_dict
 from AtomObjectBuilder import build_atom_objects, compare_symmetric_atoms
-from QueueFuncs import Queue, queue_edge_atoms, queue_bond_atoms, run_queue
+from QueueFuncs import Queue, queue_bond_atoms, run_queue
 
 def map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList):
     # If delete atoms provided, add them to the mappedIDList. No purpose to including them in the queue
@@ -33,7 +32,7 @@ def map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList):
         assert len(preDeleteAtoms) == len(postDeleteAtoms), 'Pre-bond and post-bond files have different numbers of delete atoms.'
         for index, preAtom in enumerate(preDeleteAtoms):
             mappedIDList.append([preAtom, postDeleteAtoms[index]])
-            logging.debug(f'Pre: {preAtom}, Post: {postDeleteAtoms[index]} found with specified delete atom')
+            logging.debug(f'Pre: {preAtom}, Post: {postDeleteAtoms[index]} found with user specified delete atom')
 
 def get_missing_atom_objects(missingAtomList, atomObjectDict):
     missingAtomObjects = []
@@ -43,7 +42,7 @@ def get_missing_atom_objects(missingAtomList, atomObjectDict):
 
     return missingAtomObjects
 
-def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue):
+def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue, allowInference):
     missingCheckCounter = 1
     while missingCheckCounter < 4 and len(missingPostAtomObjects) > 0:
         mappedPreAtomIndex = []
@@ -67,10 +66,10 @@ def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDLis
                     match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
                 else:
                     potentialPostAtomObjects = [atomObject for atomObject in missingPostAtomObjects if atomObject.element == preAtom.element]
-                    postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index')
+                    postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index', allowInference=allowInference)
                     if postIndex is not None:
                         match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
-                        logging.debug(f'The above atomID pair was found with missing atoms symmetry comparison')                                    
+                        logging.debug(f'The above atomID pair was found with missing atoms symmetry comparison')
 
         # Refresh missingPreAtomObjects so that it doesn't print needless error messages on subsequent loops
         for index in sorted(mappedPreAtomIndex, reverse=True):
@@ -97,57 +96,7 @@ def update_missing_list(missingAtomList, mappedIDList, mapIndex):
 
     return newMissingAtomList
 
-def verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, mappedIDList):
-    # Convert mappedIDList to mappedIDDict
-    mappedIDDict = {pair[0]: pair[1] for pair in mappedIDList}
-
-    # Compare if pre and post atom types are the same, return True if they are not
-    def compare_atom_type(preAtom):
-        preAtomType = preAtomObjectDict[preAtom].atomType
-        pairAtom = mappedIDDict[preAtom]
-        postAtomType = postAtomObjectDict[pairAtom].atomType
-
-        if preAtomType != postAtomType:
-            return True
-        else:
-            return False
-
-    # Check for atom type changes too close to edge atoms
-    extendDistanceDict = {}
-    for preEdgeAtom in list(preEdgeAtomDict.keys()):
-        # Edge atom
-        stopSearch = compare_atom_type(preEdgeAtom)
-
-        if stopSearch:
-            extendDistanceDict[preEdgeAtom] = 3
-            continue
-
-        # First neighbours
-        preEdgeAtomObject = preAtomObjectDict[preEdgeAtom]
-        for firstNeighbour in preEdgeAtomObject.firstNeighbourIDs:
-            
-            stopSearch = compare_atom_type(firstNeighbour)
-            
-            if stopSearch:
-                extendDistanceDict[preEdgeAtom] = 2
-                break
-
-        # Second neighbours
-        if stopSearch: continue # Prevents second neighbours running and overwriting the result from first neighbours
-        for secondNeighbour in preEdgeAtomObject.secondNeighbourIDs:
-            stopSearch = compare_atom_type(secondNeighbour)
-            
-            if stopSearch:
-                extendDistanceDict[preEdgeAtom] = 1
-                break
-
-        # If no extension required
-        if stopSearch == False:
-            extendDistanceDict[preEdgeAtom] = 0
-
-    return extendDistanceDict
-
-def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
+def map_from_path(directory, preFileName, postFileName, elementsByType, debug, preBondingAtoms, preDeleteAtoms, postBondingAtoms, postDeleteAtoms):
     # Set log level
     if debug:
         logging.basicConfig(level='DEBUG')
@@ -161,8 +110,8 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     elementDictList = [preElementDict, postElementDict]
 
     # Generate atom class objects list
-    preAtomObjectDict, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms = build_atom_objects(preFileName, preElementDict)
-    postAtomObjectDict, postBondingAtoms, postEdgeAtomDict, postDeleteAtoms = build_atom_objects(postFileName, postElementDict)
+    preAtomObjectDict = build_atom_objects(preFileName, preElementDict, preBondingAtoms)
+    postAtomObjectDict = build_atom_objects(postFileName, postElementDict, postBondingAtoms)
 
     # Assert the same number of atoms are in pre and post - maps have the same number of atoms in
     assert len(preAtomObjectDict) == len(postAtomObjectDict), f'Different numbers of atoms in pre- and post-bond files. Pre: {len(preAtomObjectDict)}, Post: {len(postAtomObjectDict)}'
@@ -178,9 +127,6 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
     # Populate queue with bonding atoms and update mappedIDList
     queue_bond_atoms(preAtomObjectDict, preBondingAtoms, postAtomObjectDict, postBondingAtoms, mappedIDList, queue)
 
-    # Populate queue with unique edge atoms if present
-    queue_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, postEdgeAtomDict, mappedIDList, queue)
-
     # Add delete atoms to the mappedIDList
     map_delete_atoms(preDeleteAtoms, postDeleteAtoms, mappedIDList)
 
@@ -192,13 +138,16 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
 
     # If missing pre atoms are present, map missing atoms and rerun the queue until success or timeout
     timeoutCounter = 1
-    while len(missingPreAtomList) > 0 and timeoutCounter < 6:
+    # Disable inference for the first search
+    inference = False
+    while len(missingPreAtomList) > 0 and timeoutCounter < 11:
         # Update missing atom lists
         missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
         missingPostAtomList = update_missing_list(missingPostAtomList, mappedIDList, 1)
 
-        # Get pre atom objects
+        # Get pre atom objects and record length of missing
         missingPreAtomObjects = get_missing_atom_objects(missingPreAtomList, preAtomObjectDict)
+        missingPreAtomCount = len(missingPostAtomList)
 
         # Add any post atoms that aren't in the map or already in the missing atoms
         mappedPostAtoms = [pair[1] for pair in mappedIDList]
@@ -209,7 +158,7 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
         # Get post atom objects
         missingPostAtomObjects = get_missing_atom_objects(missingPostAtomList, postAtomObjectDict)
 
-        map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue)
+        map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDList, queue, inference)
 
         # Refresh missingAtomLists
         missingPreAtomList = update_missing_list(missingPreAtomList, mappedIDList, 0)
@@ -219,12 +168,16 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug):
         run_queue(queue, mappedIDList, preAtomObjectDict, postAtomObjectDict, missingPreAtomList, missingPostAtomList, elementDictList)
         logging.debug(f'missingPreAtoms after loop {timeoutCounter}: {missingPreAtomList}') 
 
+        # Enable inference if no new missing atoms were solved this loop
+        if missingPreAtomCount == len(missingPreAtomList):
+            inference = True
+        else:
+            infernce = False
+
         timeoutCounter += 1
 
-    if preEdgeAtomDict is not None:
-        extendDistanceDict = verify_edge_atoms(preAtomObjectDict, preEdgeAtomDict, postAtomObjectDict, mappedIDList)
-    else:
-        extendDistanceDict = {'Dummy': 0}
-    logging.debug(f'Extended Distance: {extendDistanceDict}')
+    if len(missingPreAtomList) > 0:
+        print('Error: Missing Atom Search timed out. Atoms will be missing from the map. Please raise an issue on GitHub if the problem persists.')
+        sys.exit()
 
-    return mappedIDList, extendDistanceDict, preBondingAtoms, preEdgeAtomDict, preDeleteAtoms
+    return mappedIDList

@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/06/2021
+# Last Updated: 30/07/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -14,21 +14,27 @@
 # File Description:
 # Runs a series of different test molecules and print out resultant bonding pairs.
 # These pairs are compared to the known correct pairs and an accuracy percentage
-# is given. These tests are not designed to be chemically practical; they're
+# is given. Many of these tests are not designed to be chemically practical; they're
 # designed to tax different parts of the path search system to check functionality
 ##############################################################################
 
-from PathSearch import map_from_path
 from MapProcessor import map_processor, restore_dir
 
-# Toggle Debug Reports
-DEBUG = True
+# Toggle Debug and Test Reports
+DEBUG = False
+TEST_DEBUG = False
 
-def test_report(mappedIDList, correctPostAtomIDs, reactionName):
+def test_report(mappedIDList, correctPostAtomIDs, reactionName, reactionForm):
     print(f'Reaction: {reactionName}')
+    if reactionForm == 'Full':
+        mappedIDList = mappedIDList[0]
+    elif reactionForm == 'Partial':
+        mappedIDList = mappedIDList[1]
+
     # Print test report
-    for mappedPair in mappedIDList:
-        print(f'Atom {mappedPair[0]} is mapped to atom {mappedPair[1]}')
+    if TEST_DEBUG:
+        for mappedPair in mappedIDList:
+            print(f'Atom {mappedPair[0]} is mapped to atom {mappedPair[1]}')
 
     
     totalAtoms = len(correctPostAtomIDs)
@@ -58,31 +64,32 @@ correctDgebaDetda = {
     '1': ['1'],
     '2': ['2'],
     '3': ['3'],
-    '4': ['4'],
-    '5': ['18'],
-    '6': ['5'],
-    '7': ['6'],
-    '8': ['7'],
-    '9': ['8'],
-    '10': ['9'],
-    '11': ['10'],
-    '12': ['11'],
-    '13': ['12', '15'],
-    '14': ['13'],
-    '15': ['14'],
-    '16': ['15', '12'],
-    '17': ['19', '20'],
-    '18': ['16'],
-    '19': ['20', '19'],
-    '20': ['17']
+    '6': ['6'],
+    '8': ['78', '29'],
+    '9': ['9'],
+    '13': ['13'],
+    '16': ['16'],
+    '28': ['28'],
+    '29': ['78', '29'],
+    '37': ['37'],
+    '63': ['63'],
+    '64': ['64', '67'],
+    '65': ['65'],
+    '66': ['66'],
+    '67': ['64', '67'],
+    '68': ['79', '80'],
+    '69': ['69'],
+    '70': ['79', '80'],
+    '71': ['71'],
 }
-test_report(ddMappedIDList, correctDgebaDetda, 'DGEBA-DETDA')
+test_report(ddMappedIDList, correctDgebaDetda, 'DGEBA-DETDA', 'Partial')
 
 # Ethyl Ethanoate
 with restore_dir():
-    eeMappedIDList, _, _, _, _ = map_from_path(
-        'Test_Cases/Map_Tests/Ethyl_Ethanoate/', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O'], debug=DEBUG
-    )
+    eeMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Ethyl_Ethanoate/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['11', '6'],
+        ['2', '7'], None, ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O', 'O', 'O'], debug=DEBUG
+    ) # Del Atoms ['9', '15', '16', '16', '15', '17']
 correctEthylEthanoate = {
     '1': ['9'],
     '2': ['8'],
@@ -103,12 +110,13 @@ correctEthylEthanoate = {
     '16': ['17', '16'],
     '15': ['15']
 }
-test_report(eeMappedIDList, correctEthylEthanoate, 'Ethyl Ethanoate')
+test_report(eeMappedIDList, correctEthylEthanoate, 'Ethyl Ethanoate', 'Full')
 
 # Methane to Ethane
 with restore_dir():
-    meMappedIDList, _, _, _, _ = map_from_path(
-        'Test_Cases/Map_Tests/Methane_Ethane/', 'pre-molecule.data', 'post-molecule.data', ['H', 'C'], debug=DEBUG
+    meMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Methane_Ethane/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '6'],
+        ['1', '2'], ['5', '10', '9', '10'], ['H', 'C'], debug=DEBUG
     )
 correctEthane = {
     '1': ['1'],
@@ -122,35 +130,7 @@ correctEthane = {
     '9': ['3', '4', '5'],
     '10': ['9', '10'], 
 }
-test_report(meMappedIDList, correctEthane, 'Methane to Ethane')
-
-# LAMMPS Example - Nylon 6,6 taken from 'nylon,6-6_melt' example
-with restore_dir():
-    lnMappedIDList, _, _, _, _ = map_from_path(
-        'Test_Cases/Map_Tests/Lammps_Nylon/', 'rxn1_stp1_unreacted.data_template', 'rxn1_stp1_reacted.data_template', ['C', 'N', 'H', 'H', 'C', 'O', 'H', 'O', 'N', 'H', 'O'], debug=DEBUG
-    )
-
-correctNylon = {
-    '1': ['1'],
-    '2': ['2'],
-    '3': ['3'],
-    '4': ['4', '5'],
-    '5': ['4', '5'],
-    '6': ['6', '7'],
-    '7': ['6', '7'],
-    '8': ['8'],
-    '9': ['9'],
-    '10': ['10'],
-    '11': ['11'],
-    '12': ['12'],
-    '13': ['13', '14'],
-    '14': ['13', '14'],
-    '15': ['15'],
-    '16': ['16'],
-    '17': ['17', '18'],
-    '18': ['17', '18'],
-}
-test_report(lnMappedIDList, correctNylon, 'Nylon Melt Lammps Example')
+test_report(meMappedIDList, correctEthane, 'Methane to Ethane', 'Full')
 
 # Phenol O-Alkylation
 with restore_dir():
@@ -162,26 +142,26 @@ with restore_dir():
 correctPhenAlkyl = {
     '1': ['1'],
     '2': ['2'],
-    '3': ['3'],
     '4': ['4'],
     '5': ['5'],
     '6': ['6'],
-    '7': ['7'],
-    '8': ['19', '20'], # O-H hydrogen
     '9': ['9'],
     '10': ['10'],
-    '11': ['13'],
-    '12': ['8', '11', '12'],
-    '13': ['8', '11', '12'],
-    '14': ['8', '11', '12'],
-    '15': ['20', '19', '14', '15'], # Bonding carbon H
-    '16': ['20', '19', '14', '15'], # Bonding carbon H
-    '17': ['20', '19', '14', '15'], # Bonding carbon H
-    '18': ['16'],
-    '19': ['18', '17'],
-    '20': ['18', '17'],
+    '12': ['23', '24'],
+    '13': ['13'],
+    '14': ['14'],
+    '15': ['17'],
+    '16': ['12', '15', '16'], 
+    '17': ['12', '15', '16'],
+    '18': ['12', '15', '16'],
+    '19': ['23', '24'],
+    '20': ['18', '19'],
+    '21': ['18', '19'],
+    '22': ['20'],
+    '23': ['21', '22'],
+    '24': ['21', '22'],
 }
-test_report(paMappedIDList, correctPhenAlkyl, 'Phenol O-Alkylation')
+test_report(paMappedIDList, correctPhenAlkyl, 'Phenol O-Alkylation', 'Partial')
 
 # Symmetric Diol
 with restore_dir():
@@ -192,24 +172,24 @@ with restore_dir():
 
 correctSymmDiol = {
     '1': ['1'],
-    '2': ['15'],
-    '3': ['3'],
-    '4': ['4', '14', '16', '2'],
+    '2': ['18'],
     '5': ['5'],
-    '6': ['6', '12'],
-    '7': ['7', '11'],
+    '7': ['7', '2', '17'],
     '8': ['8'],
-    '9': ['9', '10'],
-    '10': ['9', '10'],
-    '11': ['7', '11'],
-    '12': ['6', '12'],
-    '13': ['13'],
-    '14': ['4', '14', '16', '2'],
-    '15': ['4', '14', '16', '2'],
-    '16': ['4', '14', '16', '2'],
-    '17': ['17']
+    '9': ['9', '15'],
+    '10': ['10'],
+    '11': ['11'],
+    '12': ['12', '13'],
+    '13': ['12', '13'],
+    '14': ['14'],
+    '15': ['9', '15'],
+    '16': ['16'],
+    '17': ['7', '2', '17'],
+    '18': ['7', '2', '17'],
+    '19': ['19'],
+    '20': ['20']
 }
-test_report(sdMappedIDList, correctSymmDiol, 'Symmetric Diol')
+test_report(sdMappedIDList, correctSymmDiol, 'Symmetric Diol', 'Partial')
 
 # Generic PU
 with restore_dir():
@@ -227,19 +207,19 @@ correctGenPU = {
     '6': ['6'],
     '7': ['7'],
     '8': ['8', '4'],
-    '9': ['9'],
-    '10': ['10'],
     '11': ['11'],
     '12': ['12'],
-    '13': ['13', '17'],
-    '14': ['14'],
-    '15': ['19'],
-    '16': ['16'],
-    '17': ['17', '13'],
-    '18': ['15', '18'],
-    '19': ['15', '18']
+    '30': ['30'],
+    '31': ['31'],
+    '32': ['32', '37'],
+    '33': ['33'],
+    '35': ['39'],
+    '36': ['36'],
+    '37': ['32', '37'],
+    '38': ['35', '38'],
+    '39': ['35', '38'],
 }
-test_report(gpMappedIDList, correctGenPU, 'Generic PU')
+test_report(gpMappedIDList, correctGenPU, 'Generic PU', 'Partial')
 
 # Edge Atom Symmetry
 # The key test for this is that 8 and 9, and 11 and 12 are not assigned by inference, but with edge atom symmetry
@@ -251,26 +231,26 @@ with restore_dir():
 
 correctEdgSym = {
     '1': ['1'],
-    '2': ['17'],
-    '3': ['3'],
-    '4': ['19'],
-    '5': ['5', '6'],
-    '6': ['6', '5'],
-    '7': ['7'],
-    '8': ['8'],
-    '9': ['9'],
-    '10': ['10'],
-    '11': ['11'],
-    '12': ['12'],
+    '2': ['35'],
+    '5': ['5'],
+    '7': ['37'],
+    '8': ['8', '11'],
+    '11': ['8', '11'],
     '13': ['13'],
     '14': ['14'],
-    '15': ['15'],
-    '16': ['16'],
-    '17': ['18', '4', '2'],
-    '18': ['18', '4', '2'],
-    '19': ['18', '4', '2']
+    '17': ['17'],
+    '19': ['19'],
+    '23': ['23'],
+    '26': ['26'],
+    '28': ['28'],
+    '32': ['32'],
+    '33': ['33'],
+    '34': ['34'],
+    '35': ['2', '7', '36'],
+    '36': ['2', '7', '36'],
+    '37': ['2', '7', '36'],
 }
-test_report(eaMappedIDList, correctEdgSym, 'Edge Atom Symmetry')
+test_report(eaMappedIDList, correctEdgSym, 'Edge Atom Symmetry', 'Partial')
 
 # Queue Tester
 # If this were to do the edge atoms too late, it would have to infer the symmetry atoms 5, 7 and 8
@@ -282,36 +262,36 @@ with restore_dir():
 
 correctQTest = {
     '1': ['1'],
-    '2': ['20'],
-    '3': ['3'],
-    '4': ['22'],
+    '2': ['36'],
     '5': ['5'],
-    '6': ['6', '13'],
-    '7': ['7'],
+    '7': ['38'],
     '8': ['8'],
-    '9': ['9'],
-    '10': ['10', '11'],
-    '11': ['11', '10'],
-    '12': ['12'],
-    '13': ['13', '6'],
+    '9': ['9', '21'],
+    '11': ['11'],
     '14': ['14'],
-    '15': ['15', '16'],
-    '16': ['16', '15'],
     '17': ['17'],
-    '18': ['18'],
-    '19': ['19'],
-    '20': ['21', '4', '2'],
-    '21': ['21', '4', '2'],
-    '22': ['21', '4', '2'],
-
+    '18': ['18', '19'],
+    '19': ['18', '19'],
+    '20': ['20'],
+    '21': ['9', '21'],
+    '27': ['27'],
+    '28': ['28', '29'],
+    '29': ['28', '29'],
+    '33': ['33'],
+    '34': ['34'],
+    '35': ['35'],
+    '36': ['2', '7', '37'],
+    '37': ['2', '7', '37'],
+    '38': ['2', '7', '37'],
 }
-test_report(qtMappedIDList, correctQTest, 'Edge Atom Symmetry')
+test_report(qtMappedIDList, correctQTest, 'Queue Tester', 'Partial')
 
 # Third Neighbour Symmetry
 # Should determine atoms 8 and 11 by third neighbours, not inference
 with restore_dir():
-    tnMappedIDList, _, _, _, _ = map_from_path(
-        'Test_Cases/Map_Tests/Third_Neighbour_Symmetry/', 'pre-molecule.data', 'post-molecule.data', ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+    tnMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Third_Neighbour_Symmetry/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
+        ['1', '12'], ['1', '12'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
     )
 
 correctTNTest = {
@@ -320,12 +300,9 @@ correctTNTest = {
     '3': ['3', '4'],
     '4': ['3', '4'],
     '5': ['5'],
-    '6': ['6', '32'],
     '7': ['35'],
     '8': ['8'],
-    '9': ['9', '10'],
-    '10': ['9', '10'],
-    '11': ['11', '10'],
+    '11': ['11'],
     '12': ['12'],
     '13': ['13'],
     '14': ['14'],
@@ -333,23 +310,89 @@ correctTNTest = {
     '16': ['2', '7', '34'],
     '17': ['2', '7', '34'],
     '18': ['18'],
-    '19': ['19'],
-    '20': ['20'],
-    '21': ['21', '22'],
-    '22': ['21', '22'],
     '23': ['23'],
-    '24': ['24', '25', '27'],
-    '25': ['24', '25', '27'],
     '26': ['26'],
-    '27': ['24', '25', '27'],
     '28': ['28', '29'],
     '29': ['28', '29'],
-    '30': ['30'],
-    '31': ['31'],
-    '32': ['6', '32'],
-    '33': ['15'],
-    '34': ['16', '17'],
-    '35': ['16', '17'],
-
 }
-test_report(tnMappedIDList, correctTNTest, 'Edge Atom Symmetry')
+test_report(tnMappedIDList, correctTNTest, 'Third Neighbour Symmetry', 'Partial')
+
+# Caprolactam
+with restore_dir():
+    caMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Caprolactam/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
+        ['3', '20'], ['3', '20'], None, ['H', 'H', 'C', 'C', 'N', 'N', 'N', 'N', 'O'], debug=DEBUG
+    )
+
+correctCATest = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3'],
+    '4': ['4', '5'],
+    '5': ['4', '5'],
+    '6': ['6', '7'],
+    '7': ['6', '7'],
+    '8': ['8'],
+    '9': ['9'],
+    '10': ['10', '11'],
+    '11': ['10', '11'],
+    '12': ['12'],
+    '15': ['15'],
+    '18': ['18'],
+    '19': ['19'],
+    '20': ['20'],
+    '21': ['21'],
+    '22': ['22'],
+    '23': ['23', '24'],
+    '24': ['23', '24'],
+    '25': ['25', '26'],
+    '26': ['25', '26'],
+    '27': ['37'],
+    '28': ['28'],
+    '29': ['29', '30'],
+    '30': ['29', '30'],
+    '31': ['31'],
+    '32': ['32', '33'],
+    '33': ['32', '33'],
+    '34': ['34'],
+    '35': ['35', '36'],
+    '36': ['35', '36'],
+    '37': ['27'],
+}
+test_report(caMappedIDList, correctCATest, 'Caprolactam', 'Partial')
+
+# Phenolic Resin
+# This tests partial molecules with byproducts that aren't deleted
+with restore_dir():
+    prMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Phenolic_Resin/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
+        ['4', '19'], ['4', '19'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+    )
+
+correctPRTest = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3'],
+    '4': ['4'],
+    '6': ['6'],
+    '7': ['7'],
+    '8': ['8'],
+    '9': ['9'],
+    '10': ['10'],
+    '13': ['29', '30'],
+    '16': ['13', '28'],
+    '17': ['13', '28'],
+    '18': ['18'],
+    '19': ['19'],
+    '20': ['20'],
+    '21': ['21'],
+    '22': ['22'],
+    '23': ['23'],
+    '24': ['24'],
+    '25': ['29', '30'],
+    '26': ['26'],
+    '27': ['27'],
+    '29': ['17'],
+    '30': ['25'],
+}
+test_report(prMappedIDList, correctPRTest, 'Phenolic Resin', 'Partial')

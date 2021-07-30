@@ -1,3 +1,21 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 30/07/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# A unit test file designed for PyTest. This tests the clean function is capable
+# of unifying two data files and cutting down a coefficient file.
+##############################################################################
+
 import os
 from LammpsUnifiedCleaner import file_unifier
 from LammpsTreatmentFuncs import clean_data

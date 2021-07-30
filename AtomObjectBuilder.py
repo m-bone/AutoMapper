@@ -1,10 +1,28 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 30/07/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# Contains key atom object creation and manipulation tools. The Atom object
+# class and builder are the building blocks for map creation.
+##############################################################################
+
 import logging
 from collections import Counter
 
-from LammpsSearchFuncs import get_data, get_top_comments, read_top_comments, find_sections, get_neighbours, get_additional_neighbours
+from LammpsSearchFuncs import get_data, find_sections, get_neighbours, get_additional_neighbours
 from LammpsTreatmentFuncs import clean_data
 
-def build_atom_objects(fileName, elementDict):
+def build_atom_objects(fileName, elementDict, bondingAtoms):
     # Load molecule file
     with open(fileName, 'r') as f:
         lines = f.readlines()
@@ -16,21 +34,7 @@ def build_atom_objects(fileName, elementDict):
 
     atomIDs = [row[0] for row in types]
     bonds = get_data('Bonds', data, sections)
-
-    # Get top comment info for bonding, edge and delete atoms
-    topComments = get_top_comments(lines)
-    bondingAtoms = read_top_comments(topComments, 'Bonding_Atoms')
-    edgeAtoms = read_top_comments(topComments, 'Edge_Atoms')
-    edgeAtomFingerprints = read_top_comments(topComments, 'Edge_Atom_Fingerprints')
-    deleteAtoms = read_top_comments(topComments, 'Delete_Atoms')
     
-    # Check for if edge atoms are present
-    if edgeAtoms is not None:
-        edgeAtomDict = {edgeAtom: edgeAtomFingerprints[index] for index, edgeAtom in enumerate(edgeAtoms)}
-    else:
-        edgeAtomDict = None
-        edgeAtoms = [] # Empty list passes later 'in' check
-
     # Build neighbours dict
     neighboursDict = get_neighbours(atomIDs, bonds, bondingAtoms)
 
@@ -40,6 +44,8 @@ def build_atom_objects(fileName, elementDict):
     atomObjectDict = {}
     for index, atomID in enumerate(atomIDs):
         atomType = types[index][1]
+
+        # Establish all neighbours
         neighbours = neighboursDict[atomID]
         secondNeighbours = get_additional_neighbours(neighboursDict, atomID, neighbours, bondingAtoms)
         thirdNeighbours = get_additional_neighbours(neighboursDict, atomID, secondNeighbours, bondingAtoms)
@@ -54,19 +60,12 @@ def build_atom_objects(fileName, elementDict):
         else:
             bondingAtom = False
 
-        # Check if atom is an edge atom, return fingerprint string or None
-        if atomID in edgeAtoms:
-            edgeAtomIndex = edgeAtoms.index(atomID)
-            edgeAtom = edgeAtomFingerprints[edgeAtomIndex]
-        else:
-            edgeAtom = None
-
-        atom = Atom(atomID, atomType, elementDict[atomID], bondingAtom, edgeAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
+        atom = Atom(atomID, atomType, elementDict[atomID], bondingAtom, neighbours, secondNeighbours, thirdNeighbours, neighbourElements, secondNeighbourElements, thirdNeighbourElements)
         atomObjectDict[atomID] = atom
     
-    return atomObjectDict, bondingAtoms, edgeAtomDict, deleteAtoms
+    return atomObjectDict
 
-def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outputType):
+def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outputType, allowInference=True):
     # Neighbour comparison - no inference
     def compare_neighbours(neighbourLevel):
         neighbourComparison = [getattr(atomObject, neighbourLevel) for atomObject in postNeighbourAtomObjectList]
@@ -75,6 +74,11 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
         # Remove duplicate fingerprints
         countFingerprints = Counter(neighbourFingerprint)
         tuppledFingerprints = [(index, fingerprint) for index, fingerprint in enumerate(neighbourFingerprint) if countFingerprints[fingerprint] == 1]
+
+        # If any of the fingerprints are empty (i.e. the atom has no Xneighbours) return None
+        for _, fingerprint in tuppledFingerprints:
+            if fingerprint == '':
+                return None
 
         # Any of the potential post neighbours matches the pre atom fingerprint, return the post neighbour
         for index, fingerprint in tuppledFingerprints:
@@ -98,54 +102,36 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
     if symmetryResult is None:
         symmetryResult = compare_neighbours('thirdNeighbourElements')
 
-    # Edge atom comparison
-    if symmetryResult is None:
-        if preNeighbourAtom.edgeAtom is not None:
-            edgeFingerprints = [atomObject.edgeAtom for atomObject in postNeighbourAtomObjectList]
-            
-            countEdgeFingerprints = Counter(edgeFingerprints)
-            tuppledEdgeFingerprints = [(index, fingerprint) for index, fingerprint in enumerate(edgeFingerprints) if countEdgeFingerprints[fingerprint] == 1]
-
-            for index, fingerprint in tuppledEdgeFingerprints:
-                if preNeighbourAtom.edgeAtom == fingerprint:
-                    logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {postNeighbourAtomObjectList[index].atomID} found with edge atom symmetry')
-                    if outputType == 'index':
-                        symmetryResult = index
-                    elif outputType == 'atomID':
-                        symmetryResult = postNeighbourAtomObjectList[index].atomID
-                    else:
-                        print('Invalid output type specified for compare_symmetric_atoms')
-
     # If it makes it through all these, guess assignment and warn user about this
     if symmetryResult is not None:
         return symmetryResult
     else:
-        # Find all potential choices by breaking the postNeighbourAtomList down into atoms that match the preAtom element
-        possibleChoices = []
-        for index, postNeighbourAtom in enumerate(postNeighbourAtomObjectList):
-            if postNeighbourAtom.element == preNeighbourAtom.element:
-                possibleChoices.append((index, postNeighbourAtom.atomID))
+        if allowInference: # Only if inference is turned on
+            # Find all potential choices by breaking the postNeighbourAtomList down into atoms that match the preAtom element
+            possibleChoices = []
+            for index, postNeighbourAtom in enumerate(postNeighbourAtomObjectList):
+                if postNeighbourAtom.element == preNeighbourAtom.element:
+                    possibleChoices.append((index, postNeighbourAtom.atomID))
 
-        # Let the user know that an inference has been made     
-        logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {possibleChoices[0][1]} found with symmetry inference')
-        print(
-            f'Note: Pre-bond atomID {preNeighbourAtom.atomID} has been assigned by inference to post-bond atomID {possibleChoices[0][1]}. The potential choices were {[atom[1] for atom in possibleChoices]}. Please check this is correct.'
-        )
-        if outputType == 'index':
-                return possibleChoices[0][0]
-        elif outputType == 'atomID':
-            return possibleChoices[0][1]
-        else:
-            print('Invalid output type specified for compare_symmetric_atoms')
+            # Let the user know that an inference has been made     
+            logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {possibleChoices[0][1]} found with symmetry inference')
+            print(
+                f'Note: Pre-bond atomID {preNeighbourAtom.atomID} has been assigned by inference to post-bond atomID {possibleChoices[0][1]}. The potential choices were {[atom[1] for atom in possibleChoices]}. Please check this is correct.'
+            )
+            if outputType == 'index':
+                    return possibleChoices[0][0]
+            elif outputType == 'atomID':
+                return possibleChoices[0][1]
+            else:
+                print('Invalid output type specified for compare_symmetric_atoms')
 
 
 class Atom():
-    def __init__(self, atomID, atomType, element, bondingAtom, edgeAtom, neighbourIDs, secondNeighbourIDs, thirdNeighbourIDs, neighbourElements, secondNeighbourElements, thirdNeighbourElements):
+    def __init__(self, atomID, atomType, element, bondingAtom, neighbourIDs, secondNeighbourIDs, thirdNeighbourIDs, neighbourElements, secondNeighbourElements, thirdNeighbourElements):
         self.atomID = atomID
         self.atomType = atomType
         self.element = element
         self.bondingAtom = bondingAtom
-        self.edgeAtom = edgeAtom
 
         # Neighbours
         self.mappedNeighbourIDs = neighbourIDs # This is changed according to mapping
