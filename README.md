@@ -10,7 +10,7 @@ All tools are accessible through `AutoMapper.py`. They are:
 
 ## General Usage
 
-`AutoMapper.py` can be called from the command line with arguments for user control. It is recommended to put this downloaded repository on your `PATH` so that `AutoMapper.py` can be called from your modelling directories. Use `AutoMapper.py -h` for a full description of the arguments or see the [**manual**](MANUAL LINK) for more details. A full [**Example Workflow**](https://github.com/m-bone/AutoMapper/tree/main/Example_Workflow) is available within the repository which walks through the use of AutoMapper within a Linux environment.
+`AutoMapper.py` can be called from the command line with arguments for user control. It is recommended to put this downloaded repository on your `PATH` so that `AutoMapper.py` can be called from your modelling directories. Use `AutoMapper.py -h` for a full description of the arguments or see the [**manual**](https://github.com/m-bone/AutoMapper/blob/Dev-Branch/AutoMapper_Manual.pdf) for more details. A full [**Example Workflow**](https://github.com/m-bone/AutoMapper/tree/main/Example_Workflow) is available within the repository which walks through the use of AutoMapper within a Linux environment.
 
 Below are command line examples for the different tools.
 
