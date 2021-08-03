@@ -1,11 +1,23 @@
 #This is an AutoMapper generated map
 
-24 equivalences
+20 equivalences
+2 deleteIDs
+2 edgeIDs
 
 BondingIDs 
 
-13
-14
+9
+10
+
+DeleteIDs 
+
+8
+15
+
+EdgeIDs 
+
+5
+2
 
 Equivalences 
 
@@ -20,16 +32,12 @@ Equivalences
 9	9
 10	10
 11	11
-12	24
+12	12
 13	13
 14	14
-15	17
+15	15
 16	16
-17	15
-18	12
+17	17
+18	18
 19	19
-20	18
-21	23
-22	20
-23	22
-24	21
+20	20

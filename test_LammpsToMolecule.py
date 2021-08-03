@@ -1,3 +1,21 @@
+##############################################################################
+# Developed by: Matthew Bone
+# Last Updated: 30/07/2021
+# Updated by: Matthew Bone
+#
+# Contact Details:
+# Bristol Composites Institute (BCI)
+# Department of Aerospace Engineering - University of Bristol
+# Queen's Building - University Walk
+# Bristol, BS8 1TR
+# U.K.
+# Email - matthew.bone@bristol.ac.uk
+#
+# File Description:
+# A unit test file designed for PyTest. Tests the LammpsToMolecule function to
+# ensure that it produces certain key outputs, where they should be.
+##############################################################################
+
 import os
 from LammpsToMolecule import lammps_to_molecule
 from LammpsTreatmentFuncs import clean_data

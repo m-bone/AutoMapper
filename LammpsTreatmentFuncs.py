@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/06/2021
+# Last Updated: 30/07/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -56,13 +56,17 @@ def clean_settings(lines):
 
     return lines
 
-def refine_data(data, searchIndex: list, IDset, newAtomIDs=None):
+def refine_data(data, searchIndex: list, IDset=None, newAtomIDs=None):
     '''
     Search multiple indices for matching atomID value.
     If match is found keep that list row in the data.
     Only output that row if the row appears len(searchIndex) times
     This means the data row contains valid atomIDs in all possible ID positions
     '''
+    # If IDSet is not given, skip refining
+    if IDset is None:
+        return data
+
     # Convenience to convert int values to list
     if type(searchIndex) is not list:
         searchIndex = [searchIndex]
@@ -76,6 +80,7 @@ def refine_data(data, searchIndex: list, IDset, newAtomIDs=None):
                     possibleValidData.append(row)
 
     # Lammps IDs found in above search
+    # E.g. for angles, if the angle '25' appears 3 times, it means that the components for angle '25' are all in the IDSet
     possibleValidIDs = [val[0] for val in possibleValidData]
     IDCount = dict(Counter(possibleValidIDs))
     # If ID counter is the same size as the search index, ID is valid and gets added to data
@@ -87,25 +92,18 @@ def refine_data(data, searchIndex: list, IDset, newAtomIDs=None):
             # Stops duplicate IDs being refound in the future
             validIDIndex = validIDs.index(row[0])
             del validIDs[validIDIndex]
+    
+    # If dict provided then use it to update the atom IDs from old to new
+    for rowInd, row in enumerate(validData, start=1):
+        if searchIndex != [0]: # Don't run this for the 'atoms' section
+            row[0] = str(rowInd) # Reset the LAMMPS ID e.g. bond number
+        for index in searchIndex:
+            row[index] = newAtomIDs[row[index]]
 
     # Re-sort validData by ID, use natsort as values are str not int
     validData = natsorted(validData, key=itemgetter(0))
-    
-    # Determine new atomIDs from 1:len(data), required for LAMMPS
-    if newAtomIDs is None:
-        renumberedAtomIDDict = {atomID[0]: str(val) for val, atomID in enumerate(validData, start=1)}
-        for index, row in enumerate(validData, start=1):
-            row[0] = str(index)
 
-        return validData, renumberedAtomIDDict
-    
-    # If dict provided then use it to update the atom IDs from old to new
-    else:
-        for rowInd, row in enumerate(validData, start=1):
-            row[0] = str(rowInd)
-            for index in searchIndex:
-                row[index] = newAtomIDs[row[index]]
-        return validData
+    return validData
 
 def add_section_keyword(sectionName, data):
     # Don't add keyword if list is empty - empty list means no section in file

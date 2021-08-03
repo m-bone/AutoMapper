@@ -1,11 +1,9 @@
-# Bonding_Atoms 1 6
-# Delete_Atoms 5 10
-
-10  atoms
-8  bonds
-12  angles
-0  dihedrals
-0  impropers
+LAMMPS Description Bonding_Atoms  1 6 ['Delete_Atoms 5 10']
+10 atoms
+8 bonds
+12 angles
+0 dihedrals
+0 impropers
 
 Types
 
@@ -71,4 +69,3 @@ Angles
 10 1 8 6 9
 11 1 8 6 10
 12 1 9 6 10
-

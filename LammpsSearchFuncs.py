@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 16/06/2021
+# Last Updated: 30/07/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -15,7 +15,7 @@
 # A range of functions designed to search LAMMPS files for information.
 # These functions work for 'read_data' files and 'molecule' files
 ##############################################################################
-import re
+from natsort import natsorted
 from LammpsTreatmentFuncs import clean_data
 
 # Get data
@@ -44,39 +44,6 @@ def get_coeff(coeffName, settingsData):
     coeffs = [line for line in settingsData if line[0] == coeffName]
     
     return coeffs
-
-def get_top_comments(data):
-    '''
-    Finds the top comments in partial data files and does some cleaning
-    These comments are used in other automation processes
-    '''
-
-    topComments = []
-
-    for line in data:
-        if '#' in line:
-            # Remove \n, the # and split line by spaces
-            cleanedLine = re.sub(r'\n', '', line)
-            cleanedLine = re.sub(r'#', '', cleanedLine)
-            cleanedLine = cleanedLine.split()
-
-            topComments.append(cleanedLine)
-        else:
-            # Stops it finding comments later in the file
-            break
-
-    return topComments
-
-def read_top_comments(topComments, commentTerm):
-    # Iterate through comments to find the one with the matching term
-    # Return remaining list of values
-    # If value is not in comments, None will be returned
-    for comment in topComments:
-        if commentTerm in comment:
-            # Delete comment term from list
-            cutComment = comment.copy()
-            cutComment.remove(commentTerm)
-            return cutComment
 
 def find_sections(lines):
     # Find index of section keywords - isalpha works as no spaces, newlines or punc in section keywords
@@ -110,57 +77,9 @@ def search_loop(bonds, bondAtom):
     
     return nextBondAtomList
         
-def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistance=3):
-    # Find bonds within a specified distance of the bonding atoms
-    
-    # Add delete atoms to valid atoms if present
-    initialValidAtoms = bondingAtoms.copy()
-    if deleteAtoms is not None:
-        initialValidAtoms.extend(deleteAtoms) # Allows partial structure tools to work when byproducts are formed and deleted
-
-    validAtomSet = set(initialValidAtoms)
-    edgeAtomList = []
-
-    for bondAtom in bondingAtoms:
-
-        # Make bondAtom a list
-        newBondAtomList = [bondAtom]
-        
-        i = 1
-        while i <= bondDistance:
-            newBondAtomList = search_loop(originalBonds, newBondAtomList)
-            if i == 1: # First pass - Stop search from finding other bonding atom if they are bound together
-                newBondAtomList = [val for val in newBondAtomList if val not in bondingAtoms]
-
-            if i < bondDistance: # Before bond distance is reached
-                # Add list as individual elements 
-                for atom in newBondAtomList:
-                    validAtomSet.add(atom)
-
-            else: # Once bond distance is reached
-                # Determine which of the last obtained atom IDs have further bonds               
-                # newBondAtomList at this point contains edge atoms of an order, and other atoms found before
-                possibleEdgeAtoms = [val for val in newBondAtomList if val not in validAtomSet]
-
-                # Add list as individual elements - has to be after possibleEdgeAtoms
-                for atom in newBondAtomList:
-                    validAtomSet.add(atom)
-
-                # Run another loop to determine if possibleEdgeAtoms have other bonds
-                for searchAtom in possibleEdgeAtoms:
-                    bondCount = 0
-                    for bond in originalBonds:
-                        nextAtomID = pair_search(bond, searchAtom)
-                        if nextAtomID is not None:
-                            bondCount += 1
-                    if bondCount > 1: # All atoms will have at least one bond
-                        edgeAtomList.append(searchAtom)
-            
-            # Increment iterator
-            i += 1
-
+def edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet):
     # Get edge atom neighbours
-    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBonds)
+    edgeAtomFingerprintDict = get_neighbours(edgeAtomList, originalBondList, []) # Bonding atoms given as blank list, edge atoms can never have bonding atoms as a neighbour so not a problem
     
     # Filter out validAtomIDs that are within the partial structure
     filteredFingerprintDict = {}
@@ -168,10 +87,15 @@ def find_partial_structure(bondingAtoms, originalBonds, deleteAtoms, bondDistanc
         cutList = [atom for atom in atomList if atom not in validAtomSet]
         filteredFingerprintDict[key] = cutList
 
-    return validAtomSet, edgeAtomList, filteredFingerprintDict
+    return filteredFingerprintDict
 
-def get_neighbours(atomIDList, bondsList):
-    '''Get atomIDs of neighbouring atoms for each atom in atomIDList'''
+def get_neighbours(atomIDList, bondsList, newBondAtoms):
+    '''
+    Get atomIDs of neighbouring atoms for each atom in atomIDList
+
+    Bonding atoms don't appear as neighbours as this is used for symmetry checks.
+    Bonding atoms always will have different neighbour fingerprints so no point looking at them.
+    '''
     boundAtomsList = []
 
     # Determine what atoms are bound to an initial atom
@@ -179,7 +103,7 @@ def get_neighbours(atomIDList, bondsList):
         bondingAtoms = []
         for bond in bondsList:
             pairResult = pair_search(bond, atom)
-            if pairResult is not None:
+            if pairResult is not None: # Stops bonding atoms appearing as neighbours CODE - and pairResult not in newBondAtoms
                 bondingAtoms.append(pairResult)
 
         boundAtomsList.append([atom, bondingAtoms])
@@ -189,7 +113,7 @@ def get_neighbours(atomIDList, bondsList):
 
     return boundAtomsDict
 
-def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, unique=True):
+def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, bondingAtoms, unique=True):
     ''' Get atomIDs of the neighbours of a given atomID.     
 
         This is designed to get second and third neighbours of a given atomID. Further away
@@ -211,6 +135,11 @@ def get_additional_neighbours(neighboursDict, searchAtomID, searchNeighbours, un
         # Remove the original search atomID from totalNeighbourSet if present
         if searchAtomID in totalNeighbourSet:
             totalNeighbourSet.remove(searchAtomID)
+
+        # Remove bonding atoms - don't want to use bonding atom fingerprints as they will always be different pre and post
+        for bondingAtom in bondingAtoms:
+            if bondingAtom in totalNeighbourSet:
+                totalNeighbourSet.remove(bondingAtom)
 
         # Remove the neighbours from this search
         for currentNeighbour in searchNeighbours:
@@ -241,9 +170,71 @@ def element_atomID_dict(fileName, elementsByType):
         types = [[atomRow[0], atomRow[2]] for atomRow in atoms]
     typesDict = {row[0]: row[1] for row in types} # Keys: ID, Val: Type
 
-    # Ensure elementsByTypes is uppercase
+    # Ensure elementsByType is uppercase
     elementsByTypeDict = {index+1: val.upper() for index, val in enumerate(elementsByType)} # Keys: Type, Val: Elements
+
+    # Assert that there are enough types in elementsByType for the highest type in the types variable
+    largestType = int(natsorted(types, key=lambda x: x[1])[-1][1]) # Types are stored as lists of [AtomNumber, TypeNumber]
+    assert len(elementsByType) >= largestType, 'EBT (elements by type) is missing values. Check that all types are present and separated with a space.'
 
     elementIDDict = {key: elementsByTypeDict[int(val)] for key, val in typesDict.items()}
 
     return elementIDDict
+
+def get_header(tidiedData):
+    '''
+    Extract all the data from the header of a LAMMPS data file.
+    Return a dictionary of keyword keys and listed numeric values
+    '''
+    
+    # Find stop line by searching for first line starting with letters
+    def get_stop_line():
+        for index, line in enumerate(tidiedData):
+            # Checks to get past the initial comment line(s):
+            if index == 0: continue
+            if line[0] == '#': continue
+
+            if line[0].isalpha():
+                return index
+
+    headerStopLine = get_stop_line()
+
+    # Build dictionary of header parts with keyword keys and list numeric values
+    headerData = tidiedData[0:headerStopLine]
+    headerDict = {'comment': []}
+    for line in headerData:
+        if line[0].isalpha() or line[0] == '#':
+            headerDict['comment'].extend([line])
+        else:
+            # Break line by spaces
+            cutLine = line.split()
+            
+            # Search through line to get the numeric values - list due to two box dimensions
+            valueList = []
+            keyList = []
+            for element in cutLine:
+                # Convert value to int, failing this a float, failing this skip it
+                try:
+                    valueList.append(int(element))
+                except ValueError:
+                    try:
+                        valueList.append(float(element))
+                    except ValueError:
+                        keyList.append(element)
+
+            # Create dict from assembled parts
+            headerDict['_'.join(keyList)] = valueList
+    
+    return headerDict
+
+def convert_header(header):
+    '''Convert a header dictionary back to a list of lists of strings for output'''
+    
+    stringHeader = []
+    for key, values in header.items():
+        headerLine = [' '.join([str(val) for val in values])]
+        if key != 'comment':
+            headerLine.extend(key.split('_'))
+        stringHeader.append(headerLine)
+    
+    return stringHeader
