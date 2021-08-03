@@ -31,12 +31,8 @@ fix 		1 statted_grp_REACT nvt temp 300.0 300.0 100
 
 fix 		4 bond_react_MASTER_group temp/rescale 1 300.0 300.0 1 1
 
-dump            1 all cfg 5000 traj.snap.*.cfg mass type xs ys zs ix iy iz
-dump_modify	 1 element H H C C O O
-
 thermo_style custom step f_fxrct[1]
 thermo          500
-run		10000
-
+run		20000
 
 write_data	output.data

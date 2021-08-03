@@ -1,24 +1,21 @@
-This is an example using the fictional reaction between phenol and an alkane with H2 given as a byproduct. I will likely replace this with a better example later, once I have a good intricate one that bonds quickly in LAMMPS.
+This folder is an example of phenolic resin polymerisation. A bond forms between the carbon of one phenol molecule to another phenol molecule by an already bound formaldehyde molecule to produce water as a byproduct, which gets deleted. For more details on this reaction, see my earlier work on the topic https://www.mdpi.com/2073-4360/12/4/926.
 
-Commands to generate an 'automap.data' file are as follows:
+Commands to generate an 'automap.data' file and pre- and post-bond molecule files are as follows:
 
-Clean the data files and system.in.settings
+Clean the data files and system.in.settings coefficient file - these files have been created using Moltemplate.
 	AutoMapper.py . clean pre_reaction.data post_reaction.data --coeff_file system.in.settings
-	
-Create pre-bond partial molecule file
-	AutoMapper.py . molecule-partial cleanedpre_reaction.data --save_name pre- --ba 13 14 	--da 12 19 --ebt H H C C O O
-	
-Create post-bond partial molecule file
-	AutoMapper.py . molecule-partial cleanedpost_reaction.data --save_name post- --ba 13 14 	--da 23 24 --ebt H H C C O O
 
-NOTE: for both these molecule files the bonding atom order represents the same atoms in each file i.e. the 13 is the reacting oxygen and 14 is the reacting carbon. The order of the atoms should always be the same.
+Create the map and molecule files
+	AutoMapper.py . map cleanedpre_reaction.data cleanedpost_reaction.data --save_name pre-molecule.data post-molecule.data --ba 4 19 4 19 --da 13 10 25 29 10 30 --ebt H H C C O O
 
-Create the map
-	AutoMapper.py . map pre-molecule.data post-molecule.data --ebt H H C C O O
-	
-NOTE: the order of files for the map should always be "pre-bond molecule post-bond molecule".
+The order of files for the map should always be "pre-bond post-bond".
+The bonding atom order represents the same atoms in each file i.e. the 4 is the reacting formaldehyde carbon and 19 is the reacting phenol carbon. The order of the atoms should always be the same. The numbers can be different between the pre- and post-bond files
+The delete atoms work in the same way as the bonding atoms. There are three delete atoms from the pre-bond and three from the post-bond and pair as such 13/29, 10/10, 25/30.
+See phenolic_resin.png to see how the cleanedpre_reaction.data and cleanedpost_reaction.data Atom IDs map onto the final partial structure.
 
 Run the LAMMPS code
 	lmp -in run.bond
 
-You should see the 0 turn to a 1 next to the step count in the thermo output.
+You should see the 0 turn to a 1 next to the step count in the thermo output. In my test of this it happened at 15000 steps
+
+If you want to see more examples setup in a similar fashion, look through the Map_Tests folder within the Test_Cases

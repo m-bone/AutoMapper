@@ -1,6 +1,6 @@
 ##############################################################################
 # Developed by: Matthew Bone
-# Last Updated: 30/07/2021
+# Last Updated: 03/08/2021
 # Updated by: Matthew Bone
 #
 # Contact Details:
@@ -21,7 +21,7 @@ import os
 from LammpsTreatmentFuncs import clean_data, add_section_keyword, refine_data, save_text_file, format_comment
 from LammpsSearchFuncs import get_data, find_sections, get_header, convert_header
 
-def lammps_to_molecule(directory, fileName, saveName, bondingAtoms: list, deleteAtoms=None, validIDSet=None, renumberedAtomDict=None):
+def lammps_to_molecule(directory, fileName, saveName, bondingAtoms: list =None, deleteAtoms=None, validIDSet=None, renumberedAtomDict=None):
     # Go to file directory
     os.chdir(directory)
 
@@ -83,7 +83,9 @@ def lammps_to_molecule(directory, fileName, saveName, bondingAtoms: list, delete
             header[info[0]] = [info[1]]
 
     # Create bonding atom comment
-    commentString = format_comment(bondingAtoms, 'Bonding_Atoms ')
+    commentString = []
+    if bondingAtoms is not None:
+        commentString = format_comment(bondingAtoms, 'Bonding_Atoms ')
     if deleteAtoms is not None:
         deleteAtomComment = format_comment(deleteAtoms, 'Delete_Atoms')
         commentString.extend([deleteAtomComment])
