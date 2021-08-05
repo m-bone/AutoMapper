@@ -251,7 +251,7 @@ class Data:
     def change_header(self, typeList):
         # Iterate through type tuples and update header
         for typeData in typeList:
-            self.header[typeData[0]] = typeData[1]
+            self.header[typeData[0]] = [typeData[1]] # Must be list or >1 digit types get space separated. Str type shouldn't be a problem
         
         # Convert list values back to strings
         stringHeader = convert_header(self.header)
