@@ -51,7 +51,7 @@ def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDLis
             elementOccurence = missingPostAtomElements.count(preAtom.element)
 
             if elementOccurence == 0:
-                print(f"Couldn't find a match in post missing atom for {preAtom.atomID}")
+                print(f"Error: Couldn't find a match in post missing atom for {preAtom.atomID}. Please try again or map the atom manually.")
 
             elif elementOccurence == 1:
                 postIndex = missingPostAtomElements.index(preAtom.element)
@@ -171,8 +171,8 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug, p
         # Enable inference if no new missing atoms were solved this loop
         if missingPreAtomCount == len(missingPreAtomList):
             inference = True
-        else:
-            infernce = False
+        else: # Disable inference if missing atoms were solved as other atoms may now be found without inference
+            inference = False
 
         timeoutCounter += 1
 

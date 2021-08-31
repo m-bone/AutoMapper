@@ -81,7 +81,7 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
     prePartialAtomsSet = keep_all_neighbours(preAtomObjectDict, preBondingAtoms, prePartialAtomsSet)
     postPartialAtomsSet = keep_all_neighbours(postAtomObjectDict, postBondingAtoms, postPartialAtomsSet)
 
-    # Keep delete atoms - IMPROVEMENT: Need to detect byproducts that are not deleted
+    # Keep delete atoms
     if preDeleteAtoms is not None:
         prePartialAtomsSet.update(preDeleteAtoms)
         postPartialAtomsSet.update(postDeleteAtoms)
@@ -91,6 +91,8 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
 
     # Check the edges aren't too close to atoms that change type
     preExtendEdgeDict = verify_edge_atoms(preEdgeAtoms, mappedIDList, preAtomObjectDict, postAtomObjectDict)
+
+    # Update mapped list and partial atom sets if edge atoms need extending
     mappedIDList, prePartialAtomsSet, postPartialAtomsSet = extend_edge_atoms(preExtendEdgeDict, mappedIDList, preAtomObjectDict, postAtomObjectDict, prePartialAtomsSet, postPartialAtomsSet)
     
     # Refind edge atoms after potential extension

@@ -166,12 +166,31 @@ class Atom():
 
 
     def map_elements(self, atomObject, preAtomObjectDict, postAtomObjectDict):
+        """Map preAtom IDs to postAtomIDs by comparing neighbouring element symbols.
+
+        Compares the occurence of string chemical element symbols of a preAtom's neighbours 
+        to the known postAtom's neighbours. Creates a list of new mappedIDs and any missing IDs 
+        based on the neighbours of the known pre and postAtom pair.
+        Relies on compare_symmetric atoms to handle non-H atoms with >1 occurence.
+
+        Args:
+            self: This is a preAtom that has succesfully been mapped
+            atomObject: The known postAtom that has already been mapped to the preAtom
+            preAtomObjectDict: A dictionary of all preAtoms in the molecule
+            postAtomObjectDict: A dictionary of all the postAtoms in the molecule
+
+        Returns:
+            A partial mappedIDlist, partial missing pre and postAtom lists and additional atoms for the queue
+        """
+
         # Output variables
         mapList = []
         missingPreAtoms = []
         queueAtoms = []
 
         def allowed_maps(preAtom, postAtom):
+            '''Populate missing atoms prematurely instead of making misleading
+            maps based on element occurence'''
             # Checks if elements appear the same number of times in pre and post atoms
             # If they don't, mapping is not allowed to take place and atoms are moved to missing lists
             preElementOccurences = Counter(preAtom.mappedNeighbourElements)
@@ -205,7 +224,7 @@ class Atom():
             postAtom.mappedNeighbourIDs.pop(postAtomIndex)
             postAtom.mappedNeighbourElements.pop(postAtomIndex)
 
-        # Loop through neighbours for atom in one state and compare to neighbours of atom in other state
+        # Loop through neighbours for preAtom and compare to neighbours of postAtom
         for preIndex, neighbour in enumerate(self.mappedNeighbourElements):
             elementOccurence = atomObject.mappedNeighbourElements.count(neighbour)
 

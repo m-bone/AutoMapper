@@ -90,3 +90,5 @@ elif tool == "molecule":
 elif tool == 'map':
     map_processor(directory, args.data_files[0], args.data_files[1], args.save_name[0], args.save_name[1], args.ba[:2], args.ba[2:], args.da, args.ebt, args.debug)
 
+# Print message to show AutoMapper is complete
+print('AutoMapper Task Complete')
