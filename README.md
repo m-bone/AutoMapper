@@ -2,6 +2,8 @@
 
 AutoMapper is a package of tools designed to automate the creation of files required for the [**LAMMPS**](https://lammps.sandia.gov) command _fix bond/react_. The tools allow the user to convert LAMMPS input files into molecule format files and an automatically generated a map file of a reaction. AutoMapper will reduce these files to the smallest possible partial structure without any additional user input. AutoMapper should work with any valid LAMMPS input file, though was designed to work with [**Moltemplate**](https://github.com/jewettaij/moltemplate) output files so users may find it easier to use these packages together. AutoMapper is completely forcefield independant so users are free to use any forcefield they wish. Any problems encountered while using AutoMapper should be raised in the [**Issues**](https://github.com/m-bone/AutoMapper/issues) section where they will be addressed as quickly as possible. For a full tutorial and annotated walkthrough, see the [**manual**](https://github.com/m-bone/AutoMapper/blob/Dev-Branch/AutoMapper_Manual.pdf).
 
+Note: AutoMapper was built for LAMMPS version 29Oct20. The REACT package has been changed in newer versions, but it is believed AutoMapper still works. This will be fully tested in the future.
+
 ## Tool Description
 All tools are accessible through `AutoMapper.py`. They are:
 - `clean`: Unify the types (e.g. Atom, Bond, Angle, etc.) between two or more files and remove unused coefficients.
