@@ -32,7 +32,7 @@ from LammpsTreatmentFuncs import save_text_file
 from LammpsSearchFuncs import element_atomID_dict
 from AtomObjectBuilder import build_atom_objects
 
-def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileName, postMoleculeFileName, preBondingAtoms, postBondingAtoms, deleteAtoms, elementsByType, debug=False):
+def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileName, postMoleculeFileName, preBondingAtoms, postBondingAtoms, deleteAtoms, elementsByType, createAtoms, debug=False):
     # Set log level
     if debug:
         logging.basicConfig(level='DEBUG')
@@ -58,7 +58,7 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
 
     # Initial map creation
     with restore_dir():
-        mappedIDList = map_from_path(directory, preMoleculeFileName, postMoleculeFileName, elementsByType, debug, preBondingAtoms, preDeleteAtoms, postBondingAtoms, postDeleteAtoms)
+        mappedIDList = map_from_path(directory, preMoleculeFileName, postMoleculeFileName, elementsByType, debug, preBondingAtoms, preDeleteAtoms, postBondingAtoms, postDeleteAtoms, createAtoms)
 
     # Cut map down to smallest possible partial structure
     with restore_dir():
@@ -68,7 +68,7 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
         postElementDict = element_atomID_dict(postMoleculeFileName, elementsByType)
 
         preAtomObjectDict = build_atom_objects(preMoleculeFileName, preElementDict, preBondingAtoms)
-        postAtomObjectDict = build_atom_objects(postMoleculeFileName, postElementDict, postBondingAtoms) 
+        postAtomObjectDict = build_atom_objects(postMoleculeFileName, postElementDict, postBondingAtoms, createAtoms=createAtoms) 
 
     # Determine if bonding atom is part of a cycle, and if so what atoms make up the cycle and their neighbours 
     prePreservedAtomIDs = is_cyclic(preAtomObjectDict, preBondingAtoms, 'Pre-bond')
@@ -86,6 +86,10 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
         prePartialAtomsSet.update(preDeleteAtoms)
         postPartialAtomsSet.update(postDeleteAtoms)
 
+    # Keep create atoms in the post atom set
+    if createAtoms is not None:
+        postPartialAtomsSet.update(createAtoms)
+
     # Find initial pre-bond edge atoms
     preEdgeAtoms = find_edge_atoms(preAtomObjectDict, prePartialAtomsSet)
 
@@ -101,7 +105,7 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
     # Check for and get byproduct atoms that aren't deleteIDs
     postAtomByproducts = get_byproducts(postAtomObjectDict, postBondingAtoms)
     if postAtomByproducts is not None:
-        logging.debug(f'Byproducts found. Byproducts are {postAtomByproducts}')
+        logging.debug(f'Byproducts found. Byproducts are {postAtomByproducts} (post IDs)')
         postPartialAtomsSet.update(postAtomByproducts)
 
     # Order mappedIDList by preAtomID
@@ -128,6 +132,19 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
         if preEdgeAtoms is not None:
             preEdgeAtoms = renumber(preEdgeAtoms, preRenumberdAtomDict)
 
+        # If create atoms are included, figure out the renumberedAtomDict and then renumber
+        if createAtoms is not None:
+            IDCounter = max([int(val) for val in postRenumberedAtomDict.values()]) # Initialise counter as highest ID of renumbered atoms
+
+            # Extend renumberedAtomDict for createAtoms
+            for createAtom in createAtoms:
+                IDCounter += 1
+                postRenumberedAtomDict[createAtom] = str(IDCounter)
+
+            # Renumber createAtoms with the new renumberedAtomDict
+            createAtoms = renumber(createAtoms, postRenumberedAtomDict)
+
+
         # Rebuild molecule files with partial structure
         with restore_dir():
             lammps_to_molecule(directory, preDataFileName, preMoleculeFileName, preBondingAtoms, deleteAtoms=preDeleteAtoms, validIDSet=prePartialAtomsSet, renumberedAtomDict=preRenumberdAtomDict)
@@ -138,15 +155,15 @@ def map_processor(directory, preDataFileName, postDataFileName, preMoleculeFileN
     # Output the map file
     with restore_dir():
         os.chdir(directory)
-        outputData = output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms)
+        outputData = output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms, createAtoms)
         save_text_file('automap.data', outputData)
 
     # Returns mappedIDList for other functions to use e.g. testing
     return [mappedIDList, partialMappedIDList]
 
-def output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms):
+def output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms, createAtoms):
     # Bonding atoms
-    bondingAtoms = [['BondingIDs', '\n']]
+    bondingAtoms = [['\n', 'BondingIDs', '\n']]
     for atom in preBondingAtoms:
         bondingAtoms.extend([[atom]])
     bondingAtoms.extend(['\n'])
@@ -170,7 +187,16 @@ def output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms):
         for atom in preEdgeAtoms:
             edgeAtoms.extend([[atom]])
         edgeAtoms.extend(['\n'])
-    edgeIDCount.extend('\n')
+
+    # Create Atoms
+    createIDCount = []
+    outputCreateAtoms = []
+    if createAtoms is not None:
+        createIDCount.extend([[str(len(createAtoms)) + ' createIDs']])
+        outputCreateAtoms.extend([['CreateIDs', '\n']])
+        for atom in createAtoms:
+            outputCreateAtoms.extend([[atom]])
+        outputCreateAtoms.extend(['\n'])
 
     # Equivalences
     equivalences = [['#This is an AutoMapper generated map\n'], [str(len(mappedIDList)) + ' equivalences']]
@@ -180,7 +206,7 @@ def output_map(mappedIDList, preBondingAtoms, preEdgeAtoms, preDeleteAtoms):
 
     # Output data
     output = []
-    totalOutput = [equivalences, deleteIDCount, edgeIDCount, bondingAtoms, deleteAtoms, edgeAtoms, equivalenceAtoms]
+    totalOutput = [equivalences, deleteIDCount, edgeIDCount, createIDCount, bondingAtoms, deleteAtoms, edgeAtoms, outputCreateAtoms, equivalenceAtoms]
 
     for section in totalOutput:
         output.extend(section)

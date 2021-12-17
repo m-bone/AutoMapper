@@ -89,7 +89,7 @@ def edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet):
 
     return filteredFingerprintDict
 
-def get_neighbours(atomIDList, bondsList, newBondAtoms):
+def get_neighbours(atomIDList, bondsList):
     '''
     Get atomIDs of neighbouring atoms for each atom in atomIDList
 
@@ -103,7 +103,7 @@ def get_neighbours(atomIDList, bondsList, newBondAtoms):
         bondingAtoms = []
         for bond in bondsList:
             pairResult = pair_search(bond, atom)
-            if pairResult is not None: # Stops bonding atoms appearing as neighbours CODE - and pairResult not in newBondAtoms
+            if pairResult is not None: # Stops bonding atoms appearing as neighbours
                 bondingAtoms.append(pairResult)
 
         boundAtomsList.append([atom, bondingAtoms])

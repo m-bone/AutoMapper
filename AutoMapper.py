@@ -53,6 +53,7 @@ parser.add_argument('--ba', metavar='bonding_atoms', nargs='+', help='Argument f
 parser.add_argument('--ebt', metavar='elements_by_type', nargs='+', help='Argument for the "map" tools: series of elements symbols in the same order as the types specified in the data file and separated with a space')
 parser.add_argument('--da', metavar='delete_atoms', nargs='+', help='An optional argument for the "map" tool: atom IDs of the atoms that will be deleted after the bond has formed, separated by a space')
 parser.add_argument('--debug', action='store_true', help='An optional argument for the "map" tool: prints debugging statements with information on the path search and map processor.')
+parser.add_argument('--ca', metavar='create_atoms', nargs='+', help='An optional argument for the "map" tool: atom IDs of the atoms that will be created after the bond has formed, separated by a space')
 
 # Get arguments from parser
 args = parser.parse_args()
@@ -88,7 +89,7 @@ elif tool == "molecule":
 
 # Combined molecule and map creation code
 elif tool == 'map':
-    map_processor(directory, args.data_files[0], args.data_files[1], args.save_name[0], args.save_name[1], args.ba[:2], args.ba[2:], args.da, args.ebt, args.debug)
+    map_processor(directory, args.data_files[0], args.data_files[1], args.save_name[0], args.save_name[1], args.ba[:2], args.ba[2:], args.da, args.ebt, args.ca, args.debug)
 
 # Print message to show AutoMapper is complete
 print('AutoMapper Task Complete')

@@ -22,7 +22,7 @@ from collections import Counter
 from LammpsSearchFuncs import get_data, find_sections, get_neighbours, get_additional_neighbours
 from LammpsTreatmentFuncs import clean_data
 
-def build_atom_objects(fileName, elementDict, bondingAtoms):
+def build_atom_objects(fileName, elementDict, bondingAtoms, createAtoms=[]):
     # Load molecule file
     with open(fileName, 'r') as f:
         lines = f.readlines()
@@ -36,13 +36,29 @@ def build_atom_objects(fileName, elementDict, bondingAtoms):
     bonds = get_data('Bonds', data, sections)
     
     # Build neighbours dict
-    neighboursDict = get_neighbours(atomIDs, bonds, bondingAtoms)
+    neighboursDict = get_neighbours(atomIDs, bonds)
+
+    # Remove createAtoms as neighbours - confuses the map and are not required
+    if createAtoms is not None:
+        for keyAtom, neighbours in neighboursDict.items():
+            updatedList = []
+            for atom in neighbours:
+                if atom not in createAtoms:
+                    updatedList.append(atom) # Done this way as cannot update list whilst iterating through it
+            
+            neighboursDict[keyAtom] = updatedList
 
     def get_elements(neighbourIDs, elementDict):
         return [elementDict[atomID]for atomID in neighbourIDs]
 
     atomObjectDict = {}
     for index, atomID in enumerate(atomIDs):
+        # Prevent createAtoms from enetering object dict
+        if createAtoms is not None:
+            if atomID in createAtoms:
+                continue
+
+        # Get atom type
         atomType = types[index][1]
 
         # Establish all neighbours

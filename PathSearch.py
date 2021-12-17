@@ -96,7 +96,7 @@ def update_missing_list(missingAtomList, mappedIDList, mapIndex):
 
     return newMissingAtomList
 
-def map_from_path(directory, preFileName, postFileName, elementsByType, debug, preBondingAtoms, preDeleteAtoms, postBondingAtoms, postDeleteAtoms):
+def map_from_path(directory, preFileName, postFileName, elementsByType, debug, preBondingAtoms, preDeleteAtoms, postBondingAtoms, postDeleteAtoms, createAtoms):
     # Set log level
     if debug:
         logging.basicConfig(level='DEBUG')
@@ -111,10 +111,11 @@ def map_from_path(directory, preFileName, postFileName, elementsByType, debug, p
 
     # Generate atom class objects list
     preAtomObjectDict = build_atom_objects(preFileName, preElementDict, preBondingAtoms)
-    postAtomObjectDict = build_atom_objects(postFileName, postElementDict, postBondingAtoms)
+    postAtomObjectDict = build_atom_objects(postFileName, postElementDict, postBondingAtoms, createAtoms=createAtoms)
 
-    # Assert the same number of atoms are in pre and post - maps have the same number of atoms in
-    assert len(preAtomObjectDict) == len(postAtomObjectDict), f'Different numbers of atoms in pre- and post-bond files. Pre: {len(preAtomObjectDict)}, Post: {len(postAtomObjectDict)}'
+    # Assert the same number of atoms are in pre and post - maps have the same number of atoms in unless create atoms are included
+    if createAtoms is None:
+        assert len(preAtomObjectDict) == len(postAtomObjectDict), f'Different numbers of atoms in pre- and post-bond files. Pre: {len(preAtomObjectDict)}, Post: {len(postAtomObjectDict)}'
 
     # Initialise lists
     missingPreAtomList = []
