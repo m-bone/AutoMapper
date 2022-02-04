@@ -57,7 +57,7 @@ def test_report(mappedIDList, correctPostAtomIDs, reactionName, reactionForm):
 with restore_dir():
     ddMappedIDList = map_processor(
         'Test_Cases/Map_Tests/DGEBA_DETDA/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['28', '65'], 
-        ['28', '65'], None, ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'], debug=DEBUG
+        ['28', '65'], None, ['H', 'H', 'C', 'C', 'N', 'O', 'O', 'O'], None, debug=DEBUG
     )
 
 correctDgebaDetda = {
@@ -88,7 +88,7 @@ test_report(ddMappedIDList, correctDgebaDetda, 'DGEBA-DETDA', 'Partial')
 with restore_dir():
     eeMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Ethyl_Ethanoate/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['11', '6'],
-        ['2', '7'], None, ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O', 'O', 'O'], debug=DEBUG
+        ['2', '7'], None, ['H', 'H', 'C', 'C', 'O', 'O', 'O', 'O', 'O', 'O'], None, debug=DEBUG
     ) # Del Atoms ['9', '15', '16', '16', '15', '17']
 correctEthylEthanoate = {
     '1': ['9'],
@@ -116,7 +116,7 @@ test_report(eeMappedIDList, correctEthylEthanoate, 'Ethyl Ethanoate', 'Full')
 with restore_dir():
     meMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Methane_Ethane/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '6'],
-        ['1', '2'], ['5', '10', '9', '10'], ['H', 'C'], debug=DEBUG
+        ['1', '2'], ['5', '10', '9', '10'], ['H', 'C'], None, debug=DEBUG
     )
 correctEthane = {
     '1': ['1'],
@@ -136,7 +136,7 @@ test_report(meMappedIDList, correctEthane, 'Methane to Ethane', 'Full')
 with restore_dir():
     paMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Phenol_Alkylation/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['13', '14'], 
-        ['13', '14'], ['12', '19', '23', '24'], ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['13', '14'], ['12', '19', '23', '24'], ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctPhenAlkyl = {
@@ -167,7 +167,7 @@ test_report(paMappedIDList, correctPhenAlkyl, 'Phenol O-Alkylation', 'Partial')
 with restore_dir():
     sdMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Symmetric_Diol/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '16'], 
-        ['1', '16'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['1', '16'], None, ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctSymmDiol = {
@@ -195,7 +195,7 @@ test_report(sdMappedIDList, correctSymmDiol, 'Symmetric Diol', 'Partial')
 with restore_dir():
     gpMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Generic_PU/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '36'], 
-        ['1', '36'], None, ['H', 'H', 'C', 'C', 'C', 'C', 'N', 'N', 'O', 'O', 'O', 'O'], debug=DEBUG
+        ['1', '36'], None, ['H', 'H', 'C', 'C', 'C', 'C', 'N', 'N', 'O', 'O', 'O', 'O'], None, debug=DEBUG
     )
 
 correctGenPU = {
@@ -226,7 +226,7 @@ test_report(gpMappedIDList, correctGenPU, 'Generic PU', 'Partial')
 with restore_dir():
     eaMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Edge_Atom_Symmetry/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '32'], 
-        ['1', '32'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['1', '32'], None, ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctEdgSym = {
@@ -257,7 +257,7 @@ test_report(eaMappedIDList, correctEdgSym, 'Edge Atom Symmetry', 'Partial')
 with restore_dir():
     qtMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Queue_Tester/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', ['1', '33'], 
-        ['1', '33'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['1', '33'], None, ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctQTest = {
@@ -291,7 +291,7 @@ test_report(qtMappedIDList, correctQTest, 'Queue Tester', 'Partial')
 with restore_dir():
     tnMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Third_Neighbour_Symmetry/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
-        ['1', '12'], ['1', '12'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['1', '12'], ['1', '12'], None, ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctTNTest = {
@@ -321,7 +321,7 @@ test_report(tnMappedIDList, correctTNTest, 'Third Neighbour Symmetry', 'Partial'
 with restore_dir():
     caMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Caprolactam/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
-        ['3', '20'], ['3', '20'], None, ['H', 'H', 'C', 'C', 'N', 'N', 'N', 'N', 'O'], debug=DEBUG
+        ['3', '20'], ['3', '20'], None, ['H', 'H', 'C', 'C', 'N', 'N', 'N', 'N', 'O'], None, debug=DEBUG
     )
 
 correctCATest = {
@@ -366,7 +366,7 @@ test_report(caMappedIDList, correctCATest, 'Caprolactam', 'Partial')
 with restore_dir():
     prMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Phenolic_Resin/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
-        ['4', '19'], ['4', '19'], None, ['H', 'H', 'C', 'C', 'O', 'O'], debug=DEBUG
+        ['4', '19'], ['4', '19'], None, ['H', 'H', 'C', 'C', 'O', 'O'], None, debug=DEBUG
     )
 
 correctPRTest = {
@@ -396,3 +396,31 @@ correctPRTest = {
     '30': ['25'],
 }
 test_report(prMappedIDList, correctPRTest, 'Phenolic Resin', 'Partial')
+
+# Create Atoms Ethylene Glycol
+# Tests how mapping handles atoms created in the post-bond structure.
+
+with restore_dir():
+    crMappedIDList = map_processor(
+        'Test_Cases/Map_Tests/Create_Atoms/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
+        ['1', '2'], ['1', '2'], ['10', '25'], ['H', 'H', 'C', 'O', 'O'], createAtoms=['22', '10', '24', '20', '21', '18', '19', '23'],
+        debug=DEBUG
+    )
+
+correctCRTest = {
+    '1': ['1'],
+    '2': ['2'],
+    '3': ['3', '8'],
+    '4': ['4'],
+    '5': ['5', '9'],
+    '6': ['6', '15'],
+    '7': ['7'],
+    '8': ['8', '3'],
+    '9': ['9', '5'],
+    '10': ['25'],
+    '11': ['11'],
+    '14': ['14'],
+    '15': ['15', '6'],
+}
+
+test_report(crMappedIDList, correctCRTest, 'Create Atoms', 'Partial')

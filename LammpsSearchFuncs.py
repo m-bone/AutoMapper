@@ -89,27 +89,19 @@ def edge_atom_fingerprint_ids(edgeAtomList, originalBondList, validAtomSet):
 
     return filteredFingerprintDict
 
-def get_neighbours(atomIDList, bondsList, newBondAtoms):
+def get_neighbours(atomIDList, bondsList):
     '''
     Get atomIDs of neighbouring atoms for each atom in atomIDList
 
-    Bonding atoms don't appear as neighbours as this is used for symmetry checks.
-    Bonding atoms always will have different neighbour fingerprints so no point looking at them.
+    Bonding atoms are treated in the same fashion as all other atoms.
     '''
-    boundAtomsList = []
 
-    # Determine what atoms are bound to an initial atom
-    for atom in atomIDList:
-        bondingAtoms = []
-        for bond in bondsList:
-            pairResult = pair_search(bond, atom)
-            if pairResult is not None: # Stops bonding atoms appearing as neighbours CODE - and pairResult not in newBondAtoms
-                bondingAtoms.append(pairResult)
+    boundAtomsDict = {atom: list() for atom in atomIDList}
 
-        boundAtomsList.append([atom, bondingAtoms])
-
-    # Create dictionary of initial atom keys and bound atom list values
-    boundAtomsDict = {val[0]: val[1] for val in boundAtomsList}
+    # Iterate through bonds and build bound atom lists within a dictionary
+    for bond in bondsList:
+        boundAtomsDict[bond[2]].append(bond[3])
+        boundAtomsDict[bond[3]].append(bond[2])
 
     return boundAtomsDict
 

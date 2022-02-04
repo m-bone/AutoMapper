@@ -35,7 +35,7 @@ def inspect_values(result, expected):
     return outputList
 
 def test_get_neighbours():
-    neighboursDict = get_neighbours(atomList, bondList, bondingAtoms)
+    neighboursDict = get_neighbours(atomList, bondList)
 
     symmetryCheck = neighboursDict['3'] == neighboursDict['4'] and neighboursDict['4'] == neighboursDict['5']
 
@@ -46,7 +46,7 @@ def test_get_neighbours():
 
 def test_get_second_neighbours():
     # Inital requirements
-    neighboursDict = get_neighbours(atomList, bondList, bondingAtoms)
+    neighboursDict = get_neighbours(atomList, bondList)
     neighboursOne = neighboursDict[atomList[0]]
     neighboursTwo = neighboursDict[atomList[1]]
     neighboursSeven = neighboursDict[atomList[6]]
@@ -66,7 +66,7 @@ def test_get_second_neighbours():
 
 def test_get_third_neighbours():
     # Inital requirements
-    neighboursDict = get_neighbours(atomList, bondList, bondingAtoms)
+    neighboursDict = get_neighbours(atomList, bondList)
     neighboursOne = neighboursDict[atomList[0]]
     secondNeighboursOne = get_additional_neighbours(neighboursDict, atomList[0], neighboursOne, bondingAtoms)
     
