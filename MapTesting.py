@@ -403,7 +403,7 @@ test_report(prMappedIDList, correctPRTest, 'Phenolic Resin', 'Partial')
 with restore_dir():
     crMappedIDList = map_processor(
         'Test_Cases/Map_Tests/Create_Atoms/', 'cleanedpre_reaction.data', 'cleanedpost_reaction.data', 'pre-molecule.data', 'post-molecule.data', 
-        ['1', '2'], ['1', '2'], ['10', '25'], ['H', 'H', 'C', 'O', 'O'], createAtoms=['18', '19', '23', '22', '10', '24', '20', '21'],
+        ['1', '2'], ['1', '2'], ['10', '25'], ['H', 'H', 'C', 'O', 'O'], createAtoms=['22', '10', '24', '20', '21', '18', '19', '23'],
         debug=DEBUG
     )
 

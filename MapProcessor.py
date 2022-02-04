@@ -291,7 +291,7 @@ def is_cyclic(atomObjectDict, bondingAtoms, reactionType):
             
             preservedAtomIDs[bondingAtom] = preservedIDsSet
 
-    return preservedAtomIDs  
+    return preservedAtomIDs
 
 def find_mapped_pair(preAtom, mappedIDList):
     # Get the post atom from the map for a given preAtom
