@@ -24,14 +24,11 @@ from natsort import natsorted # For refine_data
 
 # Function maybe moved to general function file later
 def clean_data(lines):
-    # Remove blank lines 
+    # Remove blank lines
     lines = [line for line in lines if line != '\n']
 
     # Remove comments - negative lookbehind means label comments in masses are kept e.g # C_3
     lines = [re.sub(r'(?<!\d\s\s)#(.*)', '' ,line) for line in lines]
-
-    # Remove 5 spaces moltemplate/LAMMPS puts in front of header file
-    lines = [re.sub(r'\s{5}', '' ,line) for line in lines]
 
     # Remove newline terminators
     lines = [re.sub(r'\n', '', line) for line in lines]
@@ -50,7 +47,7 @@ def clean_settings(lines):
 
     # Remove tabs
     lines = [re.sub(r'\t', '', line) for line in lines]
-    
+
     # Replace multiple whitespaces with one
     lines = [re.sub(r'\s{2,}', ' ', line) for line in lines]
 
@@ -84,7 +81,7 @@ def refine_data(data, searchIndex: list, IDset=None, newAtomIDs=None):
     possibleValidIDs = [val[0] for val in possibleValidData]
     IDCount = dict(Counter(possibleValidIDs))
     # If ID counter is the same size as the search index, ID is valid and gets added to data
-    validIDs = [key for key in IDCount.keys() if IDCount[key] == len(searchIndex)]        
+    validIDs = [key for key in IDCount.keys() if IDCount[key] == len(searchIndex)]
     validData = []
     for row in possibleValidData:
         if row[0] in validIDs:
@@ -92,7 +89,7 @@ def refine_data(data, searchIndex: list, IDset=None, newAtomIDs=None):
             # Stops duplicate IDs being refound in the future
             validIDIndex = validIDs.index(row[0])
             del validIDs[validIDIndex]
-    
+
     # If dict provided then use it to update the atom IDs from old to new
     for rowInd, row in enumerate(validData, start=1):
         if searchIndex != [0]: # Don't run this for the 'atoms' section
