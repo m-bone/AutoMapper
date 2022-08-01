@@ -2,7 +2,11 @@
 
 AutoMapper is a package of tools designed to automate the creation of files required for the [**LAMMPS**](https://lammps.sandia.gov) command _fix bond/react_. The tools allow the user to convert LAMMPS input files into molecule format files and an automatically generated a map file of a reaction. AutoMapper will reduce these files to the smallest possible partial structure without any additional user input. AutoMapper should work with any valid LAMMPS input file, though was designed to work with [**Moltemplate**](https://github.com/jewettaij/moltemplate) output files so users may find it easier to use these packages together. AutoMapper is completely forcefield independant so users are free to use any forcefield they wish. Any problems encountered while using AutoMapper should be raised in the [**Issues**](https://github.com/m-bone/AutoMapper/issues) section where they will be addressed as quickly as possible. For a full tutorial and annotated walkthrough, see the [**manual**](https://github.com/m-bone/AutoMapper/blob/main/AutoMapper_Manual.pdf). An in depth overview of how AutoMapper works can be found in the [**journal article**](https://doi.org/10.1016/j.commatsci.2022.111204) in Computational Materials Science. If you use AutoMapper in your research, please cite this work in your publications. 
 
-AutoMapper was originally built for LAMMPS versions 29Oct20 but is being updated for new versions of REACTER. It has the capability to handle create atoms and should work with new type ID strings: both of these features were added in the 29Sept21 version. The depreciation warning caused by using `Bonding IDs` instead of `Initiator IDs` can be ignored for now. 
+AutoMapper was originally built for LAMMPS versions 29Oct20 but is being updated for new versions of REACTER. It has the capability to handle create atoms and should work with new type ID strings: both of these features were added in the 29Sept21 version. The depreciation warning caused by using `Bonding IDs` instead of `Initiator IDs` can be ignored for now. </br></br></br>
+
+<img src="https://images.squarespace-cdn.com/content/v1/629f14f2eb9f9508129c50e0/4c1b544b-791d-4b76-8d55-3d21b0074052/MolydynV4NoBack.png" width="400">
+
+AutoMapper is now being maintained by [**Molydyn**](www.molydyn.com) as part of our efforts to make computational chemistry more accessible, and help drive materials discovery through simulation. More details can be found on [**our website**](www.molydyn.com).
 
 ## Tool Description
 All tools are accessible through `AutoMapper.py`. They are:
