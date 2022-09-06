@@ -68,7 +68,7 @@ def map_missing_atoms(missingPreAtomObjects, missingPostAtomObjects, mappedIDLis
                     potentialPostAtomObjects = [atomObject for atomObject in missingPostAtomObjects if atomObject.element == preAtom.element]
                     postIndex = compare_symmetric_atoms(potentialPostAtomObjects, preAtom, 'index', allowInference=allowInference)
                     if postIndex is not None:
-                        match_missing(preAtom, postIndex, missingPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
+                        match_missing(preAtom, postIndex, potentialPostAtomObjects, mappedIDList, queue, preIndex, mappedPreAtomIndex)
                         logging.debug(f'The above atomID pair was found with missing atoms symmetry comparison')
 
         # Refresh missingPreAtomObjects so that it doesn't print needless error messages on subsequent loops

@@ -97,8 +97,9 @@ def compare_symmetric_atoms(postNeighbourAtomObjectList, preNeighbourAtom, outpu
                 return None
 
         # Any of the potential post neighbours matches the pre atom fingerprint, return the post neighbour
+        preNeighbourFingerprint = ''.join(sorted(getattr(preNeighbourAtom, neighbourLevel)))
         for index, fingerprint in tuppledFingerprints:
-            if ''.join(sorted(getattr(preNeighbourAtom, neighbourLevel))) == fingerprint:
+            if preNeighbourFingerprint == fingerprint:
                 logging.debug(f'Pre: {preNeighbourAtom.atomID}, Post: {postNeighbourAtomObjectList[index].atomID} found with {neighbourLevel}')
                 if outputType == 'index':
                     return index
