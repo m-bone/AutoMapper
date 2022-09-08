@@ -75,8 +75,8 @@ if tool == 'molecule' and len(args.data_files) > 1:
 if tool == 'map' and (len(args.data_files) != 2 or len(args.save_name) != 2):
     parser.error('The map tool requires 2 data_files and 2 save_names (for pre and post molecule files)')
 
-if tool == 'map' and (len(args.ba) != 4 or args.ebt is None):
-    parser.error('The map tool requires --ba (bonding atoms) with 4 atomIDs specified and --ebt (elements by type) arguments')
+if tool == 'map' and (len(args.ba) < 4 or args.ebt is None):
+    parser.error('The map tool requires --ba (bonding atoms) with at least 4 atomIDs specified and --ebt (elements by type) arguments')
 
 # Unified data file clean
 if tool == "clean":  
